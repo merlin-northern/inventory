@@ -217,7 +217,7 @@ func (db *DataStoreMongo) GetDevices(ctx context.Context, q store.ListQuery) ([]
 		},
 	}
 
-	cursor, err := c.Find(ctx, []bson.M{
+	cursor, err := c.Aggregate(ctx, []bson.M{
 		filter,
 		combinedQuery,
 		resultMap,
