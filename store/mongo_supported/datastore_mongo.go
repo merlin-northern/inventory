@@ -354,6 +354,11 @@ func (db *DataStoreMongo) UpsertAttributes(ctx context.Context, id model.DeviceI
 	update = bson.M{"$set": update,
 		"$setOnInsert": bson.M{"created_ts": now}}
 	res, err := c.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+	//if res.ModifiedCount>0 {} else {} // to check the update count
+
 	// s := db.session.Copy()
 	// defer s.Close()
 	// c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbDevicesColl)
@@ -483,6 +488,20 @@ func (db *DataStoreMongo) UpdateDeviceGroup(ctx context.Context, devId model.Dev
 }
 
 func (db *DataStoreMongo) ListGroups(ctx context.Context) ([]model.GroupName, error) {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+
+	filter := bson.M{}
+	results, err := c.Distinct(ctx, "group", filter)
+	if err != nil {
+		return nil
+	}
+
+	groups := make([]GroupName, len(results))
+	for i, d := range results {
+		groups[i] = GroupName(d.(string))
+	}
+	return groups
+
 	// s := db.session.Copy()
 	// defer s.Close()
 	// c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbDevicesColl)
@@ -493,7 +512,6 @@ func (db *DataStoreMongo) ListGroups(ctx context.Context) ([]model.GroupName, er
 	// 	return nil, errors.Wrap(err, "failed to list device groups")
 	// }
 	// return groups, nil
-	return nil, nil
 }
 
 func (db *DataStoreMongo) GetDevicesByGroup(ctx context.Context, group model.GroupName, skip, limit int) ([]model.DeviceID, int, error) {
