@@ -63,7 +63,7 @@ func (m *SimpleMigrator) Apply(ctx context.Context, target Version, migrations [
 		return VersionIsLess(migrations[i].Version(), migrations[j].Version())
 	})
 
-	applied, err := GetMigrationInfo(m.Session, m.Db)
+	applied, err := GetMigrationInfo(ctx, m.Session, m.Db)
 	if err != nil {
 		return errors.Wrap(err, "failed to list applied migrations")
 	}
@@ -112,7 +112,7 @@ func (m *SimpleMigrator) Apply(ctx context.Context, target Version, migrations [
 					last, mv)
 			}
 
-			if err := UpdateMigrationInfo(mv, m.Session, m.Db); err != nil {
+			if err := UpdateMigrationInfo(ctx, mv, m.Session, m.Db); err != nil {
 
 				return errors.Wrapf(err,
 					"failed to record migration from %s to %s",
@@ -131,7 +131,7 @@ func (m *SimpleMigrator) Apply(ctx context.Context, target Version, migrations [
 		l.Warnf("last migration to version %s did not produce target version %s",
 			last, target)
 		// record DB version anyways
-		if err := UpdateMigrationInfo(target, m.Session, m.Db); err != nil {
+		if err := UpdateMigrationInfo(ctx, target, m.Session, m.Db); err != nil {
 			return errors.Wrapf(err,
 				"failed to record migration from %s to %s",
 				last, target)

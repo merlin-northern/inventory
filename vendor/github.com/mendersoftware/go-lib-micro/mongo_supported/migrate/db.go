@@ -14,10 +14,13 @@
 package migrate
 
 import (
+	"context"
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/store"
-	// "github.com/pkg/errors"
+	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -32,7 +35,52 @@ type MigrationEntry struct {
 }
 
 // GetMigrationInfo retrieves a list of migrations applied to the db.
-func GetMigrationInfo(sess *mongo.Client, db string) ([]MigrationEntry, error) {
+func GetMigrationInfo(ctx context.Context, sess *mongo.Client, db string) ([]MigrationEntry, error) {
+	l := log.FromContext(ctx)
+
+	c := sess.Database(db).Collection(DbMigrationsColl)
+
+	cursor, err := c.Find(ctx, bson.M{})
+	if cursor == nil || err != nil {
+		return nil, errors.Wrap(err, "db: failed to get migration info")
+	}
+
+	var infoArray []MigrationEntry
+
+	for cursor.Next(ctx) {
+		var info MigrationEntry
+		element := bson.D{}
+		err := cursor.Decode(&element)
+		if err != nil {
+			return nil, errors.Wrap(err, "db: failed to decode migration info")
+		}
+		bsonBytes, e := bson.Marshal(element) // .(bson.M))
+		if e != nil {
+			return nil, errors.Wrap(err, "failed to get bson bytes")
+		}
+
+		bson.Unmarshal(bsonBytes, &info)
+		l.Infof("got info: '%v'", info)
+		infoArray = append(infoArray, info)
+	}
+
+	return infoArray, nil
+
+	// elem := &bson.D{}
+	// err = result.Decode(elem)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "db: failed to decode migration info")
+	// }
+
+	// bsonBytes, e := bson.Marshal(elem) // .(bson.M))
+	// if e != nil {
+	// 	return nil, errors.Wrap(err, "failed to get bson bytes")
+	// }
+
+	// bson.Unmarshal(bsonBytes, &info)
+	// l.Infof("returning migration info: '%v'", info)
+	// return info, nil
+
 	// s := sess.Copy()
 	// defer s.Close()
 	// c := s.DB(db).C(DbMigrationsColl)
@@ -45,11 +93,28 @@ func GetMigrationInfo(sess *mongo.Client, db string) ([]MigrationEntry, error) {
 	// }
 
 	// return info, nil
-	return nil, nil
 }
 
 // UpdateMigrationInfo inserts a migration entry in the migration info collection.
-func UpdateMigrationInfo(version Version, sess *mongo.Client, db string) error {
+func UpdateMigrationInfo(ctx context.Context, version Version, sess *mongo.Client, db string) error {
+	c := sess.Database(db).Collection(DbMigrationsColl)
+
+	entry := MigrationEntry{
+		Version:   version,
+		Timestamp: time.Now(),
+	}
+	_, err := c.InsertOne(ctx, entry)
+	if err != nil {
+		return errors.Wrap(err, "db: failed to insert migration info")
+	}
+	// result.InsertedID (InsertOneResult)
+
+	return nil
+
+	// if err != nil {
+	// 	return errors.Wrap(err, "db: failed to insert migration info")
+	// }
+
 	// s := sess.Copy()
 	// defer s.Close()
 	// c := s.DB(db).C(DbMigrationsColl)
@@ -63,11 +128,29 @@ func UpdateMigrationInfo(version Version, sess *mongo.Client, db string) error {
 	// if err != nil {
 	// 	return errors.Wrap(err, "db: failed to insert migration info")
 	// }
-
-	return nil
 }
 
-func GetTenantDbs(sess *mongo.Client, matcher store.TenantDbMatchFunc) ([]string, error) {
+func GetTenantDbs(ctx context.Context, client *mongo.Client, matcher store.TenantDbMatchFunc) ([]string, error) {
+	l := log.FromContext(ctx)
+	result, err := client.ListDatabaseNames(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+
+	tenantDbs := make([]string, len(result))
+	j := 0
+	for _, db := range result {
+		if matcher(db) {
+			tenantDbs[j] = db
+			l.Infof("(1)got db: '%s'", db)
+			j++
+		}
+	}
+	tenantDbs = tenantDbs[:j]
+
+	l.Infof("(1)returing dbs:'%v'", tenantDbs)
+	return tenantDbs, nil
+
 	// s := sess.Copy()
 	// defer s.Close()
 
@@ -84,5 +167,4 @@ func GetTenantDbs(sess *mongo.Client, matcher store.TenantDbMatchFunc) ([]string
 	// }
 
 	// return tenantDbs, err
-	return nil, nil
 }

@@ -814,14 +814,16 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 func (db *DataStoreMongo) Migrate(ctx context.Context, version string) error {
 	l := log.FromContext(ctx)
 
-	dbs, err := migrate.GetTenantDbs(db.client, mstore.IsTenantDb(DbName))
+	dbs, err := migrate.GetTenantDbs(ctx, db.client, mstore.IsTenantDb(DbName))
 	if err != nil {
 		return errors.Wrap(err, "failed go retrieve tenant DBs")
 	}
+	l.Infof("(2) got dbs from GetTenantDbs '%v'/%d", dbs, len(dbs))
 
 	if len(dbs) == 0 {
 		dbs = []string{DbName}
 	}
+	l.Infof("(2) now dbs from GetTenantDbs '%v'/%d", dbs, len(dbs))
 
 	if db.automigrate {
 		l.Infof("automigrate is ON, will apply migrations")
