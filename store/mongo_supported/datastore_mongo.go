@@ -783,33 +783,32 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 }
 
 func (db *DataStoreMongo) Migrate(ctx context.Context, version string) error {
-	// l := log.FromContext(ctx)
+	l := log.FromContext(ctx)
 
-	// dbs, err := migrate.GetTenantDbs(db.client, mstore.IsTenantDb(DbName))
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed go retrieve tenant DBs")
-	// }
+	dbs, err := migrate.GetTenantDbs(db.client, mstore.IsTenantDb(DbName))
+	if err != nil {
+		return errors.Wrap(err, "failed go retrieve tenant DBs")
+	}
 
-	// if len(dbs) == 0 {
-	// 	dbs = []string{DbName}
-	// }
+	if len(dbs) == 0 {
+		dbs = []string{DbName}
+	}
 
-	// if db.automigrate {
-	// 	l.Infof("automigrate is ON, will apply migrations")
-	// } else {
-	// 	l.Infof("automigrate is OFF, will check db version compatibility")
-	// }
+	if db.automigrate {
+		l.Infof("automigrate is ON, will apply migrations")
+	} else {
+		l.Infof("automigrate is OFF, will check db version compatibility")
+	}
 
-	// for _, d := range dbs {
-	// 	l.Infof("migrating %s", d)
+	for _, d := range dbs {
+		l.Infof("migrating %s", d)
 
-	// 	tenantId := mstore.TenantFromDbName(d, DbName)
+		tenantId := mstore.TenantFromDbName(d, DbName)
 
-	// 	if err := db.MigrateTenant(ctx, version, tenantId); err != nil {
-	// 		return err
-	// 	}
-	// }
-
+		if err := db.MigrateTenant(ctx, version, tenantId); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -822,25 +821,41 @@ func (db *DataStoreMongo) WithAutomigrate() store.DataStore {
 	}
 }
 
-// func indexAttr(s *mgo.Session, ctx context.Context, attr string) error {
-// 	l := log.FromContext(ctx)
+func indexAttr(s *mongo.Client, ctx context.Context, attr string) error {
+	l := log.FromContext(ctx)
+	c := s.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+	indexField := fmt.Sprintf("attributes.%s.values", attr)
 
-// 	err := s.DB(mstore.DbFromContext(ctx, DbName)).
-// 		C(DbDevicesColl).EnsureIndex(mgo.Index{
-// 		Key: []string{fmt.Sprintf("attributes.%s.values", attr)},
-// 	})
+	indexView := c.Indexes()
+	cursor, err := indexView.List(ctx)
+	//if index on indexField does not exist, then create:
+	//indexView.CreateOne(ctx, mongo.IndexModel{Keys: bson.M{indexField: 1,}, Options: nil,})
 
-// 	if err != nil {
-// 		if isTooManyIndexes(err) {
-// 			l.Warnf("failed to index attr %s in db %s: too many indexes", attr, mstore.DbFromContext(ctx, DbName))
-// 		} else {
-// 			return errors.Wrapf(err, "failed to index attr %s in db %s", attr, mstore.DbFromContext(ctx, DbName))
-// 		}
-// 	}
+	for cursor.Next(ctx) {
+		index := bson.D{}
+		if err := cursor.Decode(&index); err != nil {
+			// fmt.Printf("cant decode index: %s\n",err.Error())
+		} else {
+			// fmt.Printf("index: %v\n",index)
+		}
+	}
+	_, err = indexView.CreateOne(ctx, mongo.IndexModel{Keys: bson.M{indexField: 1}, Options: nil})
 
-// 	return nil
-// }
+	// err := c.EnsureIndex(mgo.Index{
+	// 	Key: []string{fmt.Sprintf("attributes.%s.values", attr)},
+	// })
 
-// func isTooManyIndexes(e error) bool {
-// 	return strings.HasPrefix(e.Error(), "add index fails, too many indexes for inventory.devices")
-// }
+	if err != nil {
+		if isTooManyIndexes(err) {
+			l.Warnf("failed to index attr %s in db %s: too many indexes", attr, mstore.DbFromContext(ctx, DbName))
+		} else {
+			return errors.Wrapf(err, "failed to index attr %s in db %s", attr, mstore.DbFromContext(ctx, DbName))
+		}
+	}
+
+	return nil
+}
+
+func isTooManyIndexes(e error) bool {
+	return strings.HasPrefix(e.Error(), "add index fails, too many indexes for inventory.devices")
+}
