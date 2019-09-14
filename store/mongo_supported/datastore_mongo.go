@@ -309,6 +309,20 @@ func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*mo
 }
 
 func (db *DataStoreMongo) AddDevice(ctx context.Context, dev *model.Device) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+
+	id, err := primitive.ObjectIDFromHex(dev.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed to store device")
+	}
+
+	filter := bson.M{"_id": id}
+	update := makeAttrUpsert(dev.Attributes)
+	now := time.Now()
+	update["updated_ts"] = now
+	update = bson.M{"$set": update,
+		"$setOnInsert": bson.M{"created_ts": now}}
+	res, err := c.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	// s := db.session.Copy()
 	// defer s.Close()
 	// c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbDevicesColl)
@@ -327,6 +341,19 @@ func (db *DataStoreMongo) AddDevice(ctx context.Context, dev *model.Device) erro
 }
 
 func (db *DataStoreMongo) UpsertAttributes(ctx context.Context, id model.DeviceID, attrs model.DeviceAttributes) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+	idDev, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.Wrap(err, "failed to store device")
+	}
+
+	filter := bson.M{"_id": idDev}
+	update := makeAttrUpsert(attrs)
+	now := time.Now()
+	update["updated_ts"] = now
+	update = bson.M{"$set": update,
+		"$setOnInsert": bson.M{"created_ts": now}}
+	res, err := c.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	// s := db.session.Copy()
 	// defer s.Close()
 	// c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbDevicesColl)
@@ -383,6 +410,24 @@ func mongoOperator(co store.ComparisonOperator) string {
 }
 
 func (db *DataStoreMongo) UnsetDeviceGroup(ctx context.Context, id model.DeviceID, groupName model.GroupName) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+
+	filter := bson.M{
+		"_id":   id,
+		"group": groupName,
+	}
+	update := bson.M{
+		"$unset": bson.M{
+			"group": 1,
+		},
+	}
+
+	res, err := c.UpdateMany(ctx, filter, update) //Update one or update many?
+	if err != nil {
+		return err
+	}
+	//if res.ModifiedCount>0 {} else {} // to check the update count
+
 	// s := db.session.Copy()
 	// defer s.Close()
 
@@ -407,6 +452,22 @@ func (db *DataStoreMongo) UnsetDeviceGroup(ctx context.Context, id model.DeviceI
 }
 
 func (db *DataStoreMongo) UpdateDeviceGroup(ctx context.Context, devId model.DeviceID, newGroup model.GroupName) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+
+	filter := bson.M{
+		"_id": devId,
+	}
+	update := bson.M{
+		"$set": &model.Device{Group: newGroup}, //FIXME: why not just newGroup?
+	}
+
+	res, err := c.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	//if res.ModifiedCount>0 {} else {} // to check the update count
+
 	// s := db.session.Copy()
 	// defer s.Close()
 	// c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbDevicesColl)
