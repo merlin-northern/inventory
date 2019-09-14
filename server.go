@@ -23,7 +23,7 @@ import (
 	api_http "github.com/mendersoftware/inventory/api/http"
 	"github.com/mendersoftware/inventory/config"
 	inventory "github.com/mendersoftware/inventory/inv"
-	"github.com/mendersoftware/inventory/store/mongo"
+	"github.com/mendersoftware/inventory/store/mongo_supported"
 )
 
 func SetupAPI(stacktype string) (*rest.Api, error) {
@@ -45,7 +45,7 @@ func RunServer(c config.Reader) error {
 
 	l := log.New(log.Ctx{})
 
-	db, err := mongo.NewDataStoreMongo(makeDataStoreConfig())
+	db, err := mongo.NewDataStoreMongo(makeDataStoreConfig(), l)
 	if err != nil {
 		return errors.Wrap(err, "database connection failed")
 	}

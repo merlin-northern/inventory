@@ -56,7 +56,7 @@ const (
 
 var (
 	//with offcial mongodb supported driver we keep client
-	client *mongo.Client
+	clientGlobal *mongo.Client
 
 	// once ensures client is created only once
 	once sync.Once
@@ -85,7 +85,7 @@ func NewDataStoreMongoWithSession(client *mongo.Client) store.DataStore {
 }
 
 //config.ConnectionString must contain a valid
-func NewDataStoreMongo(config DataStoreMongoConfig) (store.DataStore, error) {
+func NewDataStoreMongo(config DataStoreMongoConfig, l *log.Logger) (store.DataStore, error) {
 	//init master session
 	var err error
 	once.Do(func() {
@@ -107,11 +107,18 @@ func NewDataStoreMongo(config DataStoreMongoConfig) (store.DataStore, error) {
 			clientOptions.SetTLSConfig(tlsConfig)
 		}
 
+		l.Infof("mongo_supported: connecting to mongo '%v'", clientOptions)
 		ctx, _ := context.WithTimeout(context.Background(), DbConnectionTimeout_s*time.Second)
 		// client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 		// err = client.Connect(ctx,clientOptions)
-		client, err := mongo.Connect(ctx, clientOptions)
+		var err error
+		clientGlobal, err = mongo.Connect(ctx, clientOptions)
 		if err != nil {
+			l.Errorf("mongo_supported: error connecting to mongo '%s'", err.Error())
+			return
+		}
+		if clientGlobal == nil {
+			l.Errorf("mongo_supported: client is nil. wow.")
 			return
 		}
 		// from: https://www.mongodb.com/blog/post/mongodb-go-driver-tutorial
@@ -119,22 +126,44 @@ func NewDataStoreMongo(config DataStoreMongoConfig) (store.DataStore, error) {
 			It is best practice to keep a client that is connected to MongoDB around so that the application can make use of connection pooling - you don't want to open and close a connection for each query. However, if your application no longer requires a connection, the connection can be closed with client.Disconnect() like so:
 		*/
 		//err = client.Disconnect(context.TODO()) should be called when the connection is no longer needed
-		err = client.Ping(context.TODO(), nil)
+		err = clientGlobal.Ping(context.TODO(), nil)
 		if err != nil {
+			l.Errorf("mongo_supported: error pigning mongo '%s'", err.Error())
+			return
+		}
+		if clientGlobal == nil {
+			l.Errorf("mongo_supported: client is nil. wow. on exit from Once.")
 			return
 		}
 	})
 
 	if err != nil {
+		l.Errorf("mongo_supported: error: %s.", err.Error())
 		return nil, errors.Wrap(err, "failed to open mongo-driver session")
 	}
 
-	db := &DataStoreMongo{client: client}
-
+	if clientGlobal == nil {
+		l.Errorf("mongo_supported: client is nil. wow. right out of Once.")
+	}
+	db := &DataStoreMongo{client: clientGlobal}
+	if db.client == nil {
+		l.Errorf("mongo_supported: client is nil. wow. right before return.")
+	}
+	l.Infof("mongo_supported: returning db:%v", db)
 	return db, nil
 }
 
 func (db *DataStoreMongo) GetDevices(ctx context.Context, q store.ListQuery) ([]model.Device, int, error) {
+	l := log.FromContext(ctx)
+
+	l.Infof("GetDevices: backed up by mongo-supported driver; dbname=%s.", mstore.DbFromContext(ctx, DbName))
+	if db.client == nil {
+		l.Error("db client if nil. wow.")
+	}
+	if db.client.Database(mstore.DbFromContext(ctx, DbName)) == nil {
+		l.Errorf("db.client.Database(%s) if nil. wow.", mstore.DbFromContext(ctx, DbName))
+	}
+
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
 	queryFilters := make([]bson.M, 0)

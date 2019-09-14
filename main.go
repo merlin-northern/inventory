@@ -22,7 +22,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/inventory/config"
-	"github.com/mendersoftware/inventory/store/mongo"
+	"github.com/mendersoftware/inventory/store/mongo_supported"
 )
 
 func main() {
@@ -125,7 +125,7 @@ func cmdServer(args *cli.Context) error {
 		config.Config.Set(SettingMiddleware, EnvDev)
 	}
 
-	db, err := mongo.NewDataStoreMongo(makeDataStoreConfig())
+	db, err := mongo.NewDataStoreMongo(makeDataStoreConfig(), l)
 	if err != nil {
 		return cli.NewExitError(
 			fmt.Sprintf("failed to connect to db: %v", err),
@@ -169,7 +169,7 @@ func cmdMigrate(args *cli.Context) error {
 		l.Printf("migrating default tenant")
 	}
 
-	db, err := mongo.NewDataStoreMongo(makeDataStoreConfig())
+	db, err := mongo.NewDataStoreMongo(makeDataStoreConfig(), l)
 
 	if err != nil {
 		return cli.NewExitError(
