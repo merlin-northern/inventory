@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -242,6 +243,7 @@ func (db *DataStoreMongo) GetDevices(ctx context.Context, q store.ListQuery) ([]
 		bson.Unmarshal(bsonBytes, &device)
 		devices[i] = device
 	}
+
 	return devices, int(count), nil
 
 	// // filter devices - skip, limit + get count afterwards
@@ -311,18 +313,25 @@ func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*mo
 func (db *DataStoreMongo) AddDevice(ctx context.Context, dev *model.Device) error {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
-	id, err := primitive.ObjectIDFromHex(dev.ID)
-	if err != nil {
-		return errors.Wrap(err, "failed to store device")
-	}
+	// id, err := primitive.ObjectIDFromHex(dev.ID)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to store device")
+	// }
 
-	filter := bson.M{"_id": id}
+	filter := bson.M{"_id": dev.ID} // id}
 	update := makeAttrUpsert(dev.Attributes)
 	now := time.Now()
 	update["updated_ts"] = now
 	update = bson.M{"$set": update,
 		"$setOnInsert": bson.M{"created_ts": now}}
-	res, err := c.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	res, err := c.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)) //this does not insert anything else than ID from model.Device
+	if err != nil {
+		return errors.Wrap(err, "failed to store device")
+	}
+	if res.ModifiedCount > 0 {
+	} else {
+	} // to check the update count
+
 	// s := db.session.Copy()
 	// defer s.Close()
 	// c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbDevicesColl)
@@ -342,12 +351,13 @@ func (db *DataStoreMongo) AddDevice(ctx context.Context, dev *model.Device) erro
 
 func (db *DataStoreMongo) UpsertAttributes(ctx context.Context, id model.DeviceID, attrs model.DeviceAttributes) error {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
-	idDev, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return errors.Wrap(err, "failed to store device")
-	}
 
-	filter := bson.M{"_id": idDev}
+	// idDev, err := primitive.ObjectIDFromHex(id)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to store device")
+	// }
+
+	filter := bson.M{"_id": id} // idDev}
 	update := makeAttrUpsert(attrs)
 	now := time.Now()
 	update["updated_ts"] = now
@@ -357,7 +367,9 @@ func (db *DataStoreMongo) UpsertAttributes(ctx context.Context, id model.DeviceI
 	if err != nil {
 		return err
 	}
-	//if res.ModifiedCount>0 {} else {} // to check the update count
+	if res.ModifiedCount > 0 {
+	} else {
+	} // to check the update count
 
 	// s := db.session.Copy()
 	// defer s.Close()
@@ -431,7 +443,9 @@ func (db *DataStoreMongo) UnsetDeviceGroup(ctx context.Context, id model.DeviceI
 	if err != nil {
 		return err
 	}
-	//if res.ModifiedCount>0 {} else {} // to check the update count
+	if res.ModifiedCount > 0 {
+	} else {
+	} // to check the update count
 
 	// s := db.session.Copy()
 	// defer s.Close()
@@ -471,7 +485,9 @@ func (db *DataStoreMongo) UpdateDeviceGroup(ctx context.Context, devId model.Dev
 		return err
 	}
 
-	//if res.ModifiedCount>0 {} else {} // to check the update count
+	if res.ModifiedCount > 0 {
+	} else {
+	} // to check the update count
 
 	// s := db.session.Copy()
 	// defer s.Close()
@@ -493,14 +509,14 @@ func (db *DataStoreMongo) ListGroups(ctx context.Context) ([]model.GroupName, er
 	filter := bson.M{}
 	results, err := c.Distinct(ctx, "group", filter)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	groups := make([]GroupName, len(results))
+	groups := make([]model.GroupName, len(results))
 	for i, d := range results {
-		groups[i] = GroupName(d.(string))
+		groups[i] = model.GroupName(d.(string))
 	}
-	return groups
+	return groups, nil
 
 	// s := db.session.Copy()
 	// defer s.Close()
@@ -515,6 +531,46 @@ func (db *DataStoreMongo) ListGroups(ctx context.Context) ([]model.GroupName, er
 }
 
 func (db *DataStoreMongo) GetDevicesByGroup(ctx context.Context, group model.GroupName, skip, limit int) ([]model.DeviceID, int, error) {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+
+	filter := bson.M{DbDevGroup: group}
+	result := c.FindOne(ctx, filter)
+	if result == nil {
+		return nil, -1, store.ErrGroupNotFound
+	}
+
+	element := &bson.D{}
+	err := result.Decode(element)
+	if err != nil {
+		return nil, -1, errors.Wrap(err, "failed to fetch device")
+	}
+
+	dev := model.Device{}
+	bsonBytes, e := bson.Marshal(element)
+	if e != nil {
+		return nil, -1, errors.Wrap(err, "failed to get a single device for group")
+	}
+	bson.Unmarshal(bsonBytes, &dev)
+
+	hasGroup := group != ""
+	devices, totalDevices, e := db.GetDevices(ctx,
+		store.ListQuery{
+			Skip:      skip,
+			Limit:     limit,
+			Filters:   nil,
+			Sort:      nil,
+			HasGroup:  &hasGroup,
+			GroupName: string(group)})
+	if e != nil {
+		return nil, -1, errors.Wrap(e, "failed to get device list for group")
+	}
+
+	resIds := make([]model.DeviceID, len(devices))
+	for i, d := range devices {
+		resIds[i] = d.ID
+	}
+	return resIds, totalDevices, nil
+
 	// s := db.session.Copy()
 	// defer s.Close()
 	// // compose aggregation pipeline
@@ -550,10 +606,17 @@ func (db *DataStoreMongo) GetDevicesByGroup(ctx context.Context, group model.Gro
 	// 	resIds[i] = d.ID
 	// }
 	// return resIds, totalDevices, nil
-	return nil, 0, nil
+	// return nil, 0, nil
 }
 
 func (db *DataStoreMongo) GetDeviceGroup(ctx context.Context, id model.DeviceID) (model.GroupName, error) {
+	dev, err := db.GetDevice(ctx, id)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get device")
+	}
+
+	return dev.Group, nil
+
 	// s := db.session.Copy()
 	// defer s.Close()
 	// c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbDevicesColl)
@@ -570,10 +633,21 @@ func (db *DataStoreMongo) GetDeviceGroup(ctx context.Context, id model.DeviceID)
 	// }
 
 	// return dev.Group, nil
-	return "", nil
 }
 
 func (db *DataStoreMongo) DeleteDevice(ctx context.Context, id model.DeviceID) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+
+	filter := bson.M{DbDevId: id}
+	result, err := c.DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 1 {
+	} else {
+	} // to check the update count
+
+	return nil
 	// s := db.session.Copy()
 	// defer s.Close()
 
@@ -583,11 +657,52 @@ func (db *DataStoreMongo) DeleteDevice(ctx context.Context, id model.DeviceID) e
 	// 	}
 	// 	return err
 	// }
-
-	return nil
 }
 
 func (db *DataStoreMongo) GetAllAttributeNames(ctx context.Context) ([]string, error) {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+
+	project := bson.M{
+		"$project": bson.M{
+			"arrayofkeyvalue": bson.M{
+				"$objectToArray": "$$ROOT.attributes",
+			},
+		},
+	}
+
+	unwind := bson.M{
+		"$unwind": "$arrayofkeyvalue",
+	}
+
+	group := bson.M{
+		"$group": bson.M{
+			"_id": nil,
+			"allkeys": bson.M{
+				"$addToSet": "$arrayofkeyvalue.k",
+			},
+		},
+	}
+
+	cursor, err := c.Aggregate(ctx, []bson.M{
+		project,
+		unwind,
+		group,
+	})
+	defer cursor.Close(ctx)
+
+	cursor.Next(ctx)
+	elem := &bson.D{}
+	if err = cursor.Decode(elem); err != nil {
+		return nil, errors.Wrap(err, "failed to fetch device list")
+	}
+	m := elem.Map()
+	results := m["allkeys"].([]interface{})
+	attributeNames := make([]string, len(results))
+	for i, d := range results {
+		results[i] = d.(string)
+	}
+
+	return attributeNames, nil
 	// s := db.session.Copy()
 	// defer s.Close()
 
