@@ -60,6 +60,8 @@ var (
 
 	// once ensures client is created only once
 	once sync.Once
+
+	ErrNotFound = errors.New("mongo: no documents in result")
 )
 
 type DataStoreMongoConfig struct {
@@ -308,22 +310,28 @@ func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*mo
 
 	res := model.Device{}
 
-	result := c.FindOne(ctx, bson.M{DbDevId: id}) //this context is db context, right not the one from param -> FIXME
+	result := c.FindOne(ctx, bson.M{DbDevId: id})
 	if result == nil {
-		return nil, errors.Wrap(nil, "failed to fetch device")
+		return nil, errors.Wrap(result.Err(), "failed to fetch device")
 	}
 
 	elem := &bson.D{}
 	err := result.Decode(elem)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch device")
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		} else {
+			// return nil, errors.Wrap(err, "failed to decode device data")
+			return nil, errors.Wrap(err, "failed to fetch device")
+		}
 	}
 
 	// m := elem.Map()
 	// var device model.Device
 	bsonBytes, e := bson.Marshal(elem) // .(bson.M))
 	if e != nil {
-		return nil, errors.Wrap(err, "failed to fetch device")
+		// return nil, errors.Wrap(e, "failed to get device data")
+		return nil, errors.Wrap(e, "failed to fetch device")
 	}
 	bson.Unmarshal(bsonBytes, &res)
 	// err := c.FindId(id).One(&res)
@@ -359,6 +367,7 @@ func (db *DataStoreMongo) AddDevice(ctx context.Context, dev *model.Device) erro
 	}
 	if res.ModifiedCount > 0 {
 	} else {
+		return errors.Wrap(err, "failed to store device")
 	} // to check the update count
 
 	// s := db.session.Copy()
@@ -665,15 +674,20 @@ func (db *DataStoreMongo) GetDeviceGroup(ctx context.Context, id model.DeviceID)
 }
 
 func (db *DataStoreMongo) DeleteDevice(ctx context.Context, id model.DeviceID) error {
+	l := log.FromContext(ctx)
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
 	filter := bson.M{DbDevId: id}
 	result, err := c.DeleteOne(ctx, filter)
 	if err != nil {
+		l.Infof("here0: err=" + err.Error())
 		return err
 	}
-	if result.DeletedCount == 1 {
+	if result.DeletedCount > 0 {
+		l.Infof("here1: results.DeletedCount=%d", result.DeletedCount)
 	} else {
+		l.Infof("here2: returning error=%s", store.ErrDevNotFound.Error())
+		return store.ErrDevNotFound
 	} // to check the update count
 
 	return nil
