@@ -648,10 +648,15 @@ func (db *DataStoreMongo) GetDevicesByGroup(ctx context.Context, group model.Gro
 }
 
 func (db *DataStoreMongo) GetDeviceGroup(ctx context.Context, id model.DeviceID) (model.GroupName, error) {
+	l := log.FromContext(ctx)
 	dev, err := db.GetDevice(ctx, id)
-	if err != nil {
+	if err != nil || dev == nil {
+		return "", store.ErrDevNotFound
+	}
+	if err != nil || dev == nil {
 		return "", errors.Wrap(err, "failed to get device")
 	}
+	l.Infof("got dev: %v", dev)
 
 	return dev.Group, nil
 
