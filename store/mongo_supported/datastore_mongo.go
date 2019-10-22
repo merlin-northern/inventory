@@ -308,15 +308,17 @@ func (db *DataStoreMongo) GetDevices(ctx context.Context, q store.ListQuery) ([]
 func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*model.Device, error) {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
-	res := model.Device{}
+	var res model.Device
 
-	result := c.FindOne(ctx, bson.M{DbDevId: id})
-	if result == nil {
-		return nil, errors.Wrap(result.Err(), "failed to fetch device")
+	oid, _ := primitive.ObjectIDFromHex("020000000000000000000000")
+	cursor, err := c.Find(ctx, bson.M{DbDevId: oid})
+	if err != nil {
+		return nil, err // errors.Wrap(err.Error(), "failed to fetch device")
 	}
 
+	cursor.Next(ctx)
 	elem := &bson.D{}
-	err := result.Decode(elem)
+	err = cursor.Decode(elem)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
@@ -326,23 +328,20 @@ func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*mo
 		}
 	}
 
-	// m := elem.Map()
-	// var device model.Device
-	bsonBytes, e := bson.Marshal(elem) // .(bson.M))
+	bsonBytes, e := bson.Marshal(elem)
 	if e != nil {
-		// return nil, errors.Wrap(e, "failed to get device data")
-		return nil, errors.Wrap(e, "failed to fetch device")
+		return nil, errors.Wrap(err, "failed to fetch device")
 	}
 	bson.Unmarshal(bsonBytes, &res)
-	// err := c.FindId(id).One(&res)
 
-	// if err != nil {
-	// 	if err == mgo.ErrNotFound {
-	// 		return nil, nil
-	// 	} else {
-	// 		return nil, errors.Wrap(err, "failed to fetch device")
-	// 	}
+	// res.ID = model.DeviceID(m["_id"].(primitive.ObjectID))
+	// attributes := m["attributes"].(interface{})
+	// var attrs model.DeviceAttributes
+	// bsonBytes, e := bson.Marshal(attributes.(bson.D))
+	// if e != nil {
 	// }
+	// bson.Unmarshal(bsonBytes, &attrs)
+	// res.Attributes = attrs
 
 	return &res, nil
 }

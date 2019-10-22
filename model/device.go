@@ -105,15 +105,13 @@ func (did DeviceID) MarshalBSONValue() (bsontype.Type, []byte, error) {
 
 func (did *DeviceID) UnmarshalBSONValue(t bsontype.Type, raw []byte) error {
 	if t != bsontype.ObjectID {
-		return errors.New("invalid format on unmarshal bson value")
+		return errors.New("unsupported format on unmarshal bson value")
 	}
-
-	_, data, ok := bsoncore.ReadObjectID(raw)
-	if !ok {
-		return errors.New("cat read ObjectID bytes to unmarshal bson value")
+	oid, _, rc := bsoncore.ReadObjectID(raw)
+	if !rc {
+		return errors.New("catn read ObjectID")
 	}
-
-	copy(did[:], data)
+	*did = DeviceID(oid)
 	return nil
 }
 
