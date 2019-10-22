@@ -19,9 +19,12 @@ import (
 	"time"
 
 	"github.com/go-ozzo/ozzo-validation"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
-type DeviceID string
+type DeviceID primitive.ObjectID
 
 type GroupName string
 
@@ -72,10 +75,10 @@ func validateDeviceAttrValArray(arr []interface{}) error {
 // Device wrapper
 type Device struct {
 	//system-generated device ID
-	ID DeviceID `json:"id" bson:"_id,omitempty"`
+	ID DeviceID `json:"_id" bson:"_id,omitempty"`
 
 	//a map of attributes names and their values.
-	Attributes DeviceAttributes `json:"attributes,omitempty" bson:",omitempty"`
+	Attributes DeviceAttributes `json:"attributes,omitempty" bson:"attributes,omitempty"`
 
 	//device's group name
 	Group GroupName `json:"-" bson:"group,omitempty"`
@@ -93,7 +96,25 @@ func (d Device) Validate() error {
 }
 
 func (did DeviceID) String() string {
-	return string(did)
+	return primitive.ObjectID(did).String()
+}
+
+func (did DeviceID) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bsontype.ObjectID, bsoncore.AppendObjectID(nil, primitive.ObjectID(did)), nil
+}
+
+func (did *DeviceID) UnmarshalBSONValue(t bsontype.Type, raw []byte) error {
+	if t != bsontype.ObjectID {
+		return errors.New("invalid format on unmarshal bson value")
+	}
+
+	_, data, ok := bsoncore.ReadObjectID(raw)
+	if !ok {
+		return errors.New("cat read ObjectID bytes to unmarshal bson value")
+	}
+
+	copy(did[:], data)
+	return nil
 }
 
 func (gn GroupName) String() string {

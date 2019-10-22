@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package mongo_test
+package mongo_supported_test
 
 import (
 	"io/ioutil"
@@ -21,26 +21,43 @@ import (
 
 	"log"
 
+	"github.com/globalsign/mgo/bson"
 	"github.com/globalsign/mgo/dbtest"
 )
 
 var db *dbtest.DBServer
 
+type Page struct {
+	ID      bson.ObjectId `json:"_id" bson:"_id,omitempty"`
+	Slug    string        `json:"slug" bson:"slug"`
+	Name    string        `json:"name" bson:"name"`
+	Content string        `json:"content" bson:"content"`
+}
+
 // Overwrites test execution and allows for test database setup
 func TestMain(m *testing.M) {
 	log.Println("test")
-	dbdir, _ := ioutil.TempDir("", "dbsetup-test")
+	dbdir, _ := ioutil.TempDir("/tmp", "dbsetup-test")
 	// os.Exit would ignore defers, workaround
 	status := func() int {
 		// Start test database server
 		if !testing.Short() {
 			db = &dbtest.DBServer{}
 			db.SetPath(dbdir)
+			Session := db.Session()
+			Session.DB("main").C("pages").Insert(map[string]Page{
+				"p0": Page{Slug: "ding", Name: "Ding!", Content: "<i>HTML Awesomeness</i>"},
+				"p1": Page{Slug: "p1p1", Name: "p1p1", Content: "<b>HTML Awesomeness</b>"},
+			})
+			// client, err := mongo.NewClient(options.Client().ApplyURI(uri))
+			// err = client.Connect(ctx,clientOptions)
 			// Tear down databaser server
 			// Note:
 			// if test panics, it will require manual database tier down
 			// testing package executes tests in goroutines therefore
 			// we can't catch panics issued in tests.
+			log.Printf("mongo_supported: started mock mongo (mgo/dbtest)")
+			Session.Close()
 			defer os.RemoveAll(dbdir)
 			defer db.Stop()
 		}

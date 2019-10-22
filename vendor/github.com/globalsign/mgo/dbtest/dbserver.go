@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strconv"
 	"time"
 
 	mgo "github.com/globalsign/mgo"
@@ -47,7 +46,7 @@ func (dbs *DBServer) start() {
 		panic("DBServer.SetPath must be called before using the server")
 	}
 	mgo.SetStats(true)
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", "127.0.0.1:27017")
 	if err != nil {
 		panic("unable to listen on a local address: " + err.Error())
 	}
@@ -58,7 +57,7 @@ func (dbs *DBServer) start() {
 	args := []string{
 		"--dbpath", dbs.dbpath,
 		"--bind_ip", "127.0.0.1",
-		"--port", strconv.Itoa(addr.Port),
+		"--port", "27017",
 		"--nssize", "1",
 		"--noprealloc",
 		"--smallfiles",

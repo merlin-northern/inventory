@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package mongo
+package mongo_supported
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	// "go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -156,14 +156,14 @@ func NewDataStoreMongo(config DataStoreMongoConfig, l *log.Logger) (store.DataSt
 }
 
 func (db *DataStoreMongo) GetDevices(ctx context.Context, q store.ListQuery) ([]model.Device, int, error) {
-	l := log.FromContext(ctx)
+	// l := log.FromContext(ctx)
 
-	l.Infof("GetDevices: backed up by mongo-supported driver; dbname=%s.", mstore.DbFromContext(ctx, DbName))
+	// l.Infof("GetDevices: backed up by mongo-supported driver; dbname=%s.", mstore.DbFromContext(ctx, DbName))
 	if db.client == nil {
-		l.Error("db client if nil. wow.")
+		// l.Error("db client if nil. wow.")
 	}
 	if db.client.Database(mstore.DbFromContext(ctx, DbName)) == nil {
-		l.Errorf("db.client.Database(%s) if nil. wow.", mstore.DbFromContext(ctx, DbName))
+		// l.Errorf("db.client.Database(%s) if nil. wow.", mstore.DbFromContext(ctx, DbName))
 	}
 
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
@@ -350,17 +350,19 @@ func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*mo
 func (db *DataStoreMongo) AddDevice(ctx context.Context, dev *model.Device) error {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
-	// id, err := primitive.ObjectIDFromHex(dev.ID)
+	// id, err := primitive.ObjectIDFromHex("5d100d9c23affb7006dd9cff")
 	// if err != nil {
 	// 	return errors.Wrap(err, "failed to store device")
 	// }
 
-	filter := bson.M{"_id": dev.ID} // id}
+	filter := bson.M{"_id": primitive.ObjectID(dev.ID)} // id} // dev.ID.String()} // id}
 	update := makeAttrUpsert(dev.Attributes)
 	now := time.Now()
 	update["updated_ts"] = now
 	update = bson.M{"$set": update,
 		"$setOnInsert": bson.M{"created_ts": now}}
+	l := log.FromContext(ctx)
+	l.Infof("upserting: '%s'->'%s'.", filter, update)
 	res, err := c.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)) //this does not insert anything else than ID from model.Device
 	if err != nil {
 		return errors.Wrap(err, "failed to store device")
@@ -460,6 +462,8 @@ func mongoOperator(co store.ComparisonOperator) string {
 	switch co {
 	case store.Eq:
 		return "$eq"
+	case store.Regex:
+		return "$regex"
 	}
 	return ""
 }
@@ -648,7 +652,7 @@ func (db *DataStoreMongo) GetDevicesByGroup(ctx context.Context, group model.Gro
 }
 
 func (db *DataStoreMongo) GetDeviceGroup(ctx context.Context, id model.DeviceID) (model.GroupName, error) {
-	l := log.FromContext(ctx)
+	// l := log.FromContext(ctx)
 	dev, err := db.GetDevice(ctx, id)
 	if err != nil || dev == nil {
 		return "", store.ErrDevNotFound
@@ -656,7 +660,7 @@ func (db *DataStoreMongo) GetDeviceGroup(ctx context.Context, id model.DeviceID)
 	if err != nil || dev == nil {
 		return "", errors.Wrap(err, "failed to get device")
 	}
-	l.Infof("got dev: %v", dev)
+	// l.Infof("got dev: %v", dev)
 
 	return dev.Group, nil
 
@@ -679,19 +683,19 @@ func (db *DataStoreMongo) GetDeviceGroup(ctx context.Context, id model.DeviceID)
 }
 
 func (db *DataStoreMongo) DeleteDevice(ctx context.Context, id model.DeviceID) error {
-	l := log.FromContext(ctx)
+	// l := log.FromContext(ctx)
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
 	filter := bson.M{DbDevId: id}
 	result, err := c.DeleteOne(ctx, filter)
 	if err != nil {
-		l.Infof("here0: err=" + err.Error())
+		// l.Infof("here0: err=" + err.Error())
 		return err
 	}
 	if result.DeletedCount > 0 {
-		l.Infof("here1: results.DeletedCount=%d", result.DeletedCount)
+		// l.Infof("here1: results.DeletedCount=%d", result.DeletedCount)
 	} else {
-		l.Infof("here2: returning error=%s", store.ErrDevNotFound.Error())
+		// l.Infof("here2: returning error=%s", store.ErrDevNotFound.Error())
 		return store.ErrDevNotFound
 	} // to check the update count
 
