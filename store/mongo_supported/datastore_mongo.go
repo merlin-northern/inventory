@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 
 	// "net"
 	"strings"
@@ -109,18 +110,24 @@ func NewDataStoreMongo(config DataStoreMongoConfig, l *log.Logger) (store.DataSt
 			clientOptions.SetTLSConfig(tlsConfig)
 		}
 
-		l.Infof("mongo_supported: connecting to mongo '%v'", clientOptions)
+		if l != nil {
+			l.Infof("mongo_supported: connecting to mongo '%v'", clientOptions)
+		}
 		ctx, _ := context.WithTimeout(context.Background(), DbConnectionTimeout_s*time.Second)
 		// client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 		// err = client.Connect(ctx,clientOptions)
 		var err error
 		clientGlobal, err = mongo.Connect(ctx, clientOptions)
 		if err != nil {
-			l.Errorf("mongo_supported: error connecting to mongo '%s'", err.Error())
+			if l != nil {
+				l.Errorf("mongo_supported: error connecting to mongo '%s'", err.Error())
+			}
 			return
 		}
 		if clientGlobal == nil {
-			l.Errorf("mongo_supported: client is nil. wow.")
+			if l != nil {
+				l.Errorf("mongo_supported: client is nil. wow.")
+			}
 			return
 		}
 		// from: https://www.mongodb.com/blog/post/mongodb-go-driver-tutorial
@@ -130,28 +137,34 @@ func NewDataStoreMongo(config DataStoreMongoConfig, l *log.Logger) (store.DataSt
 		//err = client.Disconnect(context.TODO()) should be called when the connection is no longer needed
 		err = clientGlobal.Ping(context.TODO(), nil)
 		if err != nil {
-			l.Errorf("mongo_supported: error pigning mongo '%s'", err.Error())
+			if l != nil {
+				l.Errorf("mongo_supported: error pigning mongo '%s'", err.Error())
+
+			}
 			return
 		}
 		if clientGlobal == nil {
-			l.Errorf("mongo_supported: client is nil. wow. on exit from Once.")
+			if l != nil {
+				l.Errorf("mongo_supported: client is nil. wow. on exit from Once.")
+			}
 			return
 		}
 	})
 
 	if err != nil {
-		l.Errorf("mongo_supported: error: %s.", err.Error())
+		// l.Errorf("mongo_supported: error: %s.", err.Error())
 		return nil, errors.Wrap(err, "failed to open mongo-driver session")
 	}
 
 	if clientGlobal == nil {
-		l.Errorf("mongo_supported: client is nil. wow. right out of Once.")
+		// l.Errorf("mongo_supported: client is nil. wow. right out of Once.")
 	}
 	db := &DataStoreMongo{client: clientGlobal}
 	if db.client == nil {
-		l.Errorf("mongo_supported: client is nil. wow. right before return.")
+		// l.Errorf("mongo_supported: client is nil. wow. right before return.")
 	}
-	l.Infof("mongo_supported: returning db:%v", db)
+
+	// l.Infof("mongo_supported: returning db:%v", db)
 	return db, nil
 }
 
@@ -308,11 +321,16 @@ func (db *DataStoreMongo) GetDevices(ctx context.Context, q store.ListQuery) ([]
 func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*model.Device, error) {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
+	l := log.FromContext(ctx)
 	var res model.Device
 
-	oid, _ := primitive.ObjectIDFromHex("020000000000000000000000")
-	cursor, err := c.Find(ctx, bson.M{DbDevId: oid})
+	if id == model.NilDeviceID {
+		return nil, nil // errors.New("failed to fetch device")
+	}
+	// oid, _ := primitive.ObjectIDFromHex("020000000000000000000000")
+	cursor, err := c.Find(ctx, bson.M{DbDevId: id})
 	if err != nil {
+		l.Infof("GetDevice returns '%s'", err.Error())
 		return nil, err // errors.Wrap(err.Error(), "failed to fetch device")
 	}
 
@@ -320,9 +338,11 @@ func (db *DataStoreMongo) GetDevice(ctx context.Context, id model.DeviceID) (*mo
 	elem := &bson.D{}
 	err = cursor.Decode(elem)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if err == io.EOF { // mongo.ErrNoDocuments {
+			l.Infof("GetDevice returns nil,nil")
 			return nil, nil
 		} else {
+			l.Infof("GetDevice returns nil,'%v' 'failed to fetch device'", err)
 			// return nil, errors.Wrap(err, "failed to decode device data")
 			return nil, errors.Wrap(err, "failed to fetch device")
 		}

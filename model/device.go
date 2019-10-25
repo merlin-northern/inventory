@@ -26,6 +26,8 @@ import (
 
 type DeviceID primitive.ObjectID
 
+var NilDeviceID DeviceID //TODO: how to make it NilDeviceID:=DeviceID(primitive.NilObjectID)
+
 type GroupName string
 
 type DeviceAttribute struct {

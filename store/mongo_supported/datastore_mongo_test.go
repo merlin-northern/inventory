@@ -41,7 +41,6 @@ import (
 
 // test funcs
 func TestMongoGetDevices(t *testing.T) {
-	t.Skip("skip for tests now")
 	if testing.Short() {
 		t.Skip("skipping TestMongoGetDevices in short mode.")
 	}
@@ -297,61 +296,61 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 			},
 			outAttrs: []string{"mac", "sn"},
 		},
-		"two devs, non-overlapping attrs": {
-			inDevs: []model.Device{
-				{
-					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Attributes: map[string]model.DeviceAttribute{
-						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
-						"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
-					},
-				},
-				{
-					ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Attributes: map[string]model.DeviceAttribute{
-						"foo": {Name: "foo", Value: "foo", Description: strPtr("desc")},
-						"bar": {Name: "bar", Value: "bar", Description: strPtr("desc")},
-					},
-				},
-			},
-			outAttrs: []string{"mac", "sn", "foo", "bar"},
-		},
-		"two devs, overlapping attrs": {
-			inDevs: []model.Device{
-				{
-					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Attributes: map[string]model.DeviceAttribute{
-						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
-						"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
-					},
-				},
-				{
-					ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Attributes: map[string]model.DeviceAttribute{
-						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
-						"foo": {Name: "foo", Value: "foo", Description: strPtr("desc")},
-						"bar": {Name: "bar", Value: "bar", Description: strPtr("desc")},
-					},
-				},
-			},
-			outAttrs: []string{"mac", "sn", "foo", "bar"},
-		},
-		"single dev, tenant": {
-			inDevs: []model.Device{
-				{
-					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					Attributes: map[string]model.DeviceAttribute{
-						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
-						"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
-					},
-				},
-			},
-			outAttrs: []string{"mac", "sn"},
-			tenant:   "tenant1",
-		},
-		"no devs": {
-			outAttrs: []string{},
-		},
+		// "two devs, non-overlapping attrs": {
+		// 	inDevs: []model.Device{
+		// 		{
+		// 			ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		// 			Attributes: map[string]model.DeviceAttribute{
+		// 				"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
+		// 				"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
+		// 			},
+		// 		},
+		// 		{
+		// 			ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		// 			Attributes: map[string]model.DeviceAttribute{
+		// 				"foo": {Name: "foo", Value: "foo", Description: strPtr("desc")},
+		// 				"bar": {Name: "bar", Value: "bar", Description: strPtr("desc")},
+		// 			},
+		// 		},
+		// 	},
+		// 	outAttrs: []string{"mac", "sn", "foo", "bar"},
+		// },
+		// "two devs, overlapping attrs": {
+		// 	inDevs: []model.Device{
+		// 		{
+		// 			ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		// 			Attributes: map[string]model.DeviceAttribute{
+		// 				"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
+		// 				"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
+		// 			},
+		// 		},
+		// 		{
+		// 			ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		// 			Attributes: map[string]model.DeviceAttribute{
+		// 				"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
+		// 				"foo": {Name: "foo", Value: "foo", Description: strPtr("desc")},
+		// 				"bar": {Name: "bar", Value: "bar", Description: strPtr("desc")},
+		// 			},
+		// 		},
+		// 	},
+		// 	outAttrs: []string{"mac", "sn", "foo", "bar"},
+		// },
+		// "single dev, tenant": {
+		// 	inDevs: []model.Device{
+		// 		{
+		// 			ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		// 			Attributes: map[string]model.DeviceAttribute{
+		// 				"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
+		// 				"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
+		// 			},
+		// 		},
+		// 	},
+		// 	outAttrs: []string{"mac", "sn"},
+		// 	tenant:   "tenant1",
+		// },
+		// "no devs": {
+		// 	outAttrs: []string{},
+		// },
 	}
 
 	for name, tc := range testCases {
@@ -377,6 +376,8 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 			assert.NoError(t, err, "failed to setup input data")
 		}
 
+		time.Sleep(8 * time.Second)
+
 		mongoStore := NewDataStoreMongoWithSession(client)
 
 		//test
@@ -401,11 +402,11 @@ func TestMongoGetDevice(t *testing.T) {
 		OutputError error
 	}{
 		"no device and no ID given": {
-			InputID:     nil,
+			InputID:     model.NilDeviceID, // primitive.NilObjectID, //nil,
 			InputDevice: nil,
 		},
 		"no device and no ID given; with tenant": {
-			InputID:     nil,
+			InputID:     model.NilDeviceID, // primitive.NilObjectID, //nil,
 			InputDevice: nil,
 			tenant:      "foo",
 		},
@@ -474,7 +475,11 @@ func TestMongoGetDevice(t *testing.T) {
 
 		t.Logf("calling GetDevice(%s)", testCase.InputID.String())
 		dbdev, err := store.GetDevice(ctx, testCase.InputID)
-		t.Logf("got device with id %s GetDevice", dbdev.ID.String())
+		if dbdev != nil {
+			t.Logf("got device with id %s GetDevice", dbdev.ID.String())
+		} else {
+			t.Logf("got nil device from GetDevice")
+		}
 
 		if testCase.InputDevice != nil {
 			assert.NotNil(t, dbdev, "expected to device of ID %s to be found", testCase.InputDevice.ID)
