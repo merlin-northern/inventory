@@ -764,8 +764,13 @@ func (db *DataStoreMongo) GetAllAttributeNames(ctx context.Context) ([]string, e
 
 	cursor.Next(ctx)
 	elem := &bson.D{}
-	if err = cursor.Decode(elem); err != nil {
-		return nil, errors.Wrap(err, "failed to fetch device list")
+	err = cursor.Decode(elem)
+	if err != nil {
+		if err != io.EOF {
+			return nil, errors.Wrap(err, "failed to get attributes")
+		} else {
+			return make([]string, 0), nil
+		}
 	}
 	m := elem.Map()
 	results := m["allkeys"].([]interface{})
