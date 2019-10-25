@@ -289,12 +289,15 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 				{
 					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
-						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
-						"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
+						"mac_usb0":  {Value: "12:c6:bb:1a:f5:2c", Name: "mac_usb0"},
+						"cpu_model": {Value: "ARMv7 Processor rev 10 (v7l)", Name: "cpu_model"},
+						// "mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
+						// "sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
 					},
 				},
 			},
-			outAttrs: []string{"mac", "sn"},
+			outAttrs: []string{"mac_usb0", "cpu_model"},
+			// outAttrs: []string{"mac", "sn"},
 		},
 		// "two devs, non-overlapping attrs": {
 		// 	inDevs: []model.Device{
@@ -360,7 +363,7 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 		db.Wipe()
 
 		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+		ctx, _ := context.WithTimeout(context.Background(), 32*time.Second)
 		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
 		client, _ := mongo.Connect(ctx, clientOptions)
 

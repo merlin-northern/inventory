@@ -754,6 +754,7 @@ func (db *DataStoreMongo) GetAllAttributeNames(ctx context.Context) ([]string, e
 		},
 	}
 
+	l := log.FromContext(ctx)
 	cursor, err := c.Aggregate(ctx, []bson.M{
 		project,
 		unwind,
@@ -770,7 +771,8 @@ func (db *DataStoreMongo) GetAllAttributeNames(ctx context.Context) ([]string, e
 	results := m["allkeys"].([]interface{})
 	attributeNames := make([]string, len(results))
 	for i, d := range results {
-		results[i] = d.(string)
+		attributeNames[i] = d.(string)
+		l.Infof("GetAllAttributeNames got: '%v'", d)
 	}
 
 	return attributeNames, nil
