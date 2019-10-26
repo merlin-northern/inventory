@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -374,7 +374,7 @@ func (db *DataStoreMongo) AddDevice(ctx context.Context, dev *model.Device) erro
 	// 	return errors.Wrap(err, "failed to store device")
 	// }
 
-	filter := bson.M{"_id": primitive.ObjectID(dev.ID)} // id} // dev.ID.String()} // id}
+	filter := bson.M{"_id": dev.ID} // primitive.ObjectID(dev.ID)} // id} // dev.ID.String()} // id}
 	update := makeAttrUpsert(dev.Attributes)
 	now := time.Now()
 	update["updated_ts"] = now
@@ -505,7 +505,9 @@ func (db *DataStoreMongo) UnsetDeviceGroup(ctx context.Context, id model.DeviceI
 		return err
 	}
 	if res.ModifiedCount > 0 {
+		return nil
 	} else {
+		return store.ErrDevNotFound
 	} // to check the update count
 
 	// s := db.session.Copy()
@@ -535,7 +537,7 @@ func (db *DataStoreMongo) UpdateDeviceGroup(ctx context.Context, devId model.Dev
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
 	filter := bson.M{
-		"_id": "010000000000000000000000", // devId, //primitive.ObjectID(devId).Hex(), // model.NilDeviceID, //devId,
+		"_id": devId, // "010000000000000000000000", // devId, //primitive.ObjectID(devId).Hex(), // model.NilDeviceID, //devId,
 	}
 	update := bson.M{
 		"$set": &model.Device{Group: newGroup}, //FIXME: why not just newGroup?
@@ -604,7 +606,7 @@ func (db *DataStoreMongo) GetDevicesByGroup(ctx context.Context, group model.Gro
 	element := &bson.D{}
 	err := result.Decode(element)
 	if err != nil {
-		return nil, -1, errors.Wrap(err, "failed to fetch device")
+		return nil, -1, store.ErrGroupNotFound // errors.Wrap(err, "failed to fetch device")
 	}
 
 	dev := model.Device{}

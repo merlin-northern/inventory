@@ -19,12 +19,12 @@ import (
 	"time"
 
 	"github.com/go-ozzo/ozzo-validation"
-	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+	// "go.mongodb.org/mongo-driver/bson/bsontype"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
-type DeviceID primitive.ObjectID
+type DeviceID string
 
 var NilDeviceID DeviceID //TODO: how to make it NilDeviceID:=DeviceID(primitive.NilObjectID)
 
@@ -97,25 +97,25 @@ func (d Device) Validate() error {
 	)
 }
 
-func (did DeviceID) String() string {
-	return primitive.ObjectID(did).String()
-}
+// func (did DeviceID) String() string {
+// 	return primitive.ObjectID(did).String()
+// }
 
-func (did DeviceID) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	return bsontype.ObjectID, bsoncore.AppendObjectID(nil, primitive.ObjectID(did)), nil
-}
+// func (did DeviceID) MarshalBSONValue() (bsontype.Type, []byte, error) {
+// 	return bsontype.ObjectID, bsoncore.AppendObjectID(nil, primitive.ObjectID(did)), nil
+// }
 
-func (did *DeviceID) UnmarshalBSONValue(t bsontype.Type, raw []byte) error {
-	if t != bsontype.ObjectID {
-		return errors.New("unsupported format on unmarshal bson value")
-	}
-	oid, _, rc := bsoncore.ReadObjectID(raw)
-	if !rc {
-		return errors.New("catn read ObjectID")
-	}
-	*did = DeviceID(oid)
-	return nil
-}
+// func (did *DeviceID) UnmarshalBSONValue(t bsontype.Type, raw []byte) error {
+// 	if t != bsontype.ObjectID {
+// 		return errors.New("unsupported format on unmarshal bson value")
+// 	}
+// 	oid, _, rc := bsoncore.ReadObjectID(raw)
+// 	if !rc {
+// 		return errors.New("catn read ObjectID")
+// 	}
+// 	*did = DeviceID(oid)
+// 	return nil
+// }
 
 func (gn GroupName) String() string {
 	return string(gn)

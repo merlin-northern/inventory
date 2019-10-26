@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -46,25 +46,25 @@ func TestMongoGetDevices(t *testing.T) {
 	}
 
 	inputDevs := []model.Device{
-		{ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-		{ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Group: model.GroupName("1")},
-		{ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Group: model.GroupName("2")},
+		{ID: "000000000000000000000000"},                              // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{ID: "010000000000000000000000", Group: model.GroupName("1")}, // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Group: model.GroupName("1")},
+		{ID: "020000000000000000000000", Group: model.GroupName("2")}, // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, Group: model.GroupName("2")},
 		{
-			ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Attributes: map[string]model.DeviceAttribute{
 				"attrString": {Name: "attrString", Value: "val3", Description: strPtr("desc1")},
 				"attrFloat":  {Name: "attrFloat", Value: 3.0, Description: strPtr("desc2")},
 			},
 		},
 		{
-			ID: [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "040000000000000000000000", // [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Attributes: map[string]model.DeviceAttribute{
 				"attrString": {Name: "attrString", Value: "val4", Description: strPtr("desc1")},
 				"attrFloat":  {Name: "attrFloat", Value: 4.0, Description: strPtr("desc2")},
 			},
 		},
 		{
-			ID: [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "050000000000000000000000", // [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Attributes: map[string]model.DeviceAttribute{
 				"attrString": {Name: "attrString", Value: "val5", Description: strPtr("desc1")},
 				"attrFloat":  {Name: "attrFloat", Value: 5.0, Description: strPtr("desc2")},
@@ -72,14 +72,14 @@ func TestMongoGetDevices(t *testing.T) {
 			Group: model.GroupName("2"),
 		},
 		{
-			ID: [12]byte{6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "060000000000000000000000", // [12]byte{6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Attributes: map[string]model.DeviceAttribute{
 				"attrString": {Name: "attrString", Value: "val6", Description: strPtr("desc1")},
 				"attrFloat":  {Name: "attrFloat", Value: 4.0, Description: strPtr("desc2")},
 			},
 		},
 		{
-			ID: [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "070000000000000000000000", // [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Attributes: map[string]model.DeviceAttribute{
 				"attrString": {Name: "attrString", Value: "val4", Description: strPtr("desc1")},
 				"attrFloat":  {Name: "attrFloat", Value: 6.0, Description: strPtr("desc2")},
@@ -228,16 +228,15 @@ func TestMongoGetDevices(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
 		// Make sure we start test with empty database
 		db.Wipe()
-
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 
 		if tc.tenant != "" {
 			ctx = identity.WithContext(ctx, &identity.Identity{
@@ -271,6 +270,7 @@ func TestMongoGetDevices(t *testing.T) {
 		assert.Equal(t, len(tc.expected), len(devs))
 		assert.Equal(t, tc.devTotal, totalCount)
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestMongoGetAllAttributeNames(t *testing.T) {
@@ -287,7 +287,7 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 		"single dev": {
 			inDevs: []model.Device{
 				{
-					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac_usb0":  {Value: "12:c6:bb:1a:f5:2c", Name: "mac_usb0"},
 						"cpu_model": {Value: "ARMv7 Processor rev 10 (v7l)", Name: "cpu_model"},
@@ -302,14 +302,14 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 		"two devs, non-overlapping attrs": {
 			inDevs: []model.Device{
 				{
-					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
 						"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
 					},
 				},
 				{
-					ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"foo": {Name: "foo", Value: "foo", Description: strPtr("desc")},
 						"bar": {Name: "bar", Value: "bar", Description: strPtr("desc")},
@@ -321,14 +321,14 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 		"two devs, overlapping attrs": {
 			inDevs: []model.Device{
 				{
-					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
 						"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
 					},
 				},
 				{
-					ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
 						"foo": {Name: "foo", Value: "foo", Description: strPtr("desc")},
@@ -341,7 +341,7 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 		"single dev, tenant": {
 			inDevs: []model.Device{
 				{
-					ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
 						"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
@@ -356,16 +356,15 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 32*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
 		// Make sure we start test with empty database
 		db.Wipe()
-
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 32*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 
 		if tc.tenant != "" {
 			ctx = identity.WithContext(ctx, &identity.Identity{
@@ -390,7 +389,9 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 
 		assert.ElementsMatch(t, tc.outAttrs, names)
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
+
 func TestMongoGetDevice(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping TestMongoGetDevice in short mode.")
@@ -412,27 +413,27 @@ func TestMongoGetDevice(t *testing.T) {
 			tenant:      "foo",
 		},
 		"device with given ID not exists": {
-			InputID:     model.DeviceID([12]byte{123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+			InputID:     "7d0000000000000000000000", // model.DeviceID([12]byte{123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 			InputDevice: nil,
 		},
 		"device with given ID not exists; with tenant": {
-			InputID:     model.DeviceID([12]byte{123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+			InputID:     "7d0000000000000000000000", // model.DeviceID([12]byte{123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 			InputDevice: nil,
 			tenant:      "foo",
 		},
 		"device with given ID exists, no error": {
-			InputID: model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+			InputID: "020000000000000000000000", // model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 			InputDevice: &model.Device{
-				ID: model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+				ID: "020000000000000000000000", // model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 				},
 			},
 		},
 		"device with given ID exists, no error; with tenant": {
-			InputID: model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+			InputID: "020000000000000000000000", // model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 			InputDevice: &model.Device{
-				ID: model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+				ID: "020000000000000000000000", // model.DeviceID([12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 				},
@@ -441,16 +442,15 @@ func TestMongoGetDevice(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 32*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, testCase := range testCases {
 		t.Logf("test case: %s", name)
 
 		// Make sure we start test with empty database
 		db.Wipe()
-
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 32*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 
 		store := NewDataStoreMongoWithSession(client)
 		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
@@ -462,7 +462,7 @@ func TestMongoGetDevice(t *testing.T) {
 		}
 
 		if testCase.InputDevice != nil {
-			existingID, _ := primitive.ObjectIDFromHex("020000000000000000000000")
+			existingID := "020000000000000000000000" // primitive.ObjectIDFromHex("020000000000000000000000")
 
 			inputDevice := model.Device{
 				ID: model.DeviceID(existingID),
@@ -470,14 +470,14 @@ func TestMongoGetDevice(t *testing.T) {
 					"mac": {Name: "mac", Value: "0200-mac"},
 				},
 			}
-			t.Logf("InsertOne(%s)", testCase.InputDevice.ID.String())
+			t.Logf("InsertOne(%s)", testCase.InputDevice.ID)
 			client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(ctx, inputDevice)
 		}
 
-		t.Logf("calling GetDevice(%s)", testCase.InputID.String())
+		t.Logf("calling GetDevice(%s)", testCase.InputID)
 		dbdev, err := store.GetDevice(ctx, testCase.InputID)
 		if dbdev != nil {
-			t.Logf("got device with id %s GetDevice", dbdev.ID.String())
+			t.Logf("got device with id %s GetDevice", dbdev.ID)
 		} else {
 			t.Logf("got nil device from GetDevice")
 		}
@@ -492,6 +492,7 @@ func TestMongoGetDevice(t *testing.T) {
 		assert.NoError(t, err, "expected no error")
 
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestMongoAddDevice(t *testing.T) {
@@ -506,7 +507,7 @@ func TestMongoAddDevice(t *testing.T) {
 	// 		"sn":  {Name: "sn", Value: "0000-sn"},
 	// 	},
 	// }
-	existingID, _ := primitive.ObjectIDFromHex("000000000000000000000000")
+	existingID := "000000000000000000000000" // primitive.ObjectIDFromHex("000000000000000000000000")
 
 	existing := model.Device{
 		ID: model.DeviceID(existingID),
@@ -524,13 +525,13 @@ func TestMongoAddDevice(t *testing.T) {
 	}{
 		"valid device with one attribute, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 				},
@@ -539,13 +540,13 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with one attribute, no error; with tenant": {
 			InputDevice: &model.Device{
-				ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 				},
@@ -555,14 +556,14 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with two attributes, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 					"sn":  {Name: "sn", Value: "0002-sn"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0002-mac"},
 					"sn":  {Name: "sn", Value: "0002-sn"},
@@ -572,13 +573,13 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with attribute without value, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "040000000000000000000000", // [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "040000000000000000000000", // [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac"},
 				},
@@ -587,13 +588,13 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with array in attribute value, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "050000000000000000000000", //  [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: []interface{}{int32(123), int32(456)}},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "050000000000000000000000", // [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: []interface{}{int32(123), int32(456)}},
 				},
@@ -602,13 +603,13 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device without attributes, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "070000000000000000000000", // [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "070000000000000000000000", // [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac"},
 				},
@@ -617,14 +618,14 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with upsert, all attrs updated, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0000-mac-new"},
 					"sn":  {Name: "sn", Value: "0000-sn-new"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0000-mac-new"},
 					"sn":  {Name: "sn", Value: "0000-sn-new"},
@@ -634,13 +635,13 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with upsert, one attr updated, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0000-mac-new"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"mac": {Name: "mac", Value: "0000-mac-new"},
 					"sn":  {Name: "sn", Value: "0000-sn"},
@@ -650,13 +651,13 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with upsert, no attrs updated, new upserted, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"other-param": {Name: "other-param", Value: "other-param-value"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"other-param": {Name: "other-param", Value: "other-param-value"},
 					"mac":         {Name: "mac", Value: "0000-mac"},
@@ -667,14 +668,14 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 		"valid device with upsert, no attrs updated, many new upserted, no error": {
 			InputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"other-param":   {Name: "other-param", Value: "other-param-value"},
 					"other-param-2": {Name: "other-param-2", Value: "other-param-2-value"},
 				},
 			},
 			OutputDevice: &model.Device{
-				ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID: "000000000000000000000000", // [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Attributes: model.DeviceAttributes{
 					"other-param":   {Name: "other-param", Value: "other-param-value"},
 					"other-param-2": {Name: "other-param-2", Value: "other-param-2-value"},
@@ -686,15 +687,15 @@ func TestMongoAddDevice(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 128*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, testCase := range testCases {
 		t.Logf("test case: %s", name)
 
 		// Make sure we start test with empty database
 		db.Wipe()
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 128*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 
 		store := NewDataStoreMongoWithSession(client)
 
@@ -708,7 +709,7 @@ func TestMongoAddDevice(t *testing.T) {
 		c := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 		result, err := c.InsertOne(ctx, existing)
 		assert.NoError(t, err)
-		objectID := result.InsertedID.(primitive.ObjectID)
+		objectID := result.InsertedID.(string)
 		// testCase.InputDevice.ID = model.DeviceID(objectID)
 		// testCase.OutputDevice.ID = model.DeviceID(objectID)
 		// for i := 0; i < len(objectID); i++ {
@@ -718,7 +719,7 @@ func TestMongoAddDevice(t *testing.T) {
 
 		l := log.FromContext(ctx)
 		l.Infof("inserted id=%s calling AddDevice with device=%s.",
-			objectID.String(), testCase.InputDevice)
+			objectID, testCase.InputDevice)
 		err = store.AddDevice(ctx, testCase.InputDevice)
 
 		if testCase.OutputError != nil {
@@ -728,7 +729,7 @@ func TestMongoAddDevice(t *testing.T) {
 
 			var dbdev model.Device
 			devsColl := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
-			t.Logf("looking for: '%s'", model.DeviceID(testCase.InputDevice.ID).String())
+			t.Logf("looking for: '%s'", model.DeviceID(testCase.InputDevice.ID))
 
 			cursor, e := devsColl.Find(ctx, bson.M{DbDevId: model.DeviceID(testCase.InputDevice.ID)})
 			if e != nil {
@@ -742,7 +743,7 @@ func TestMongoAddDevice(t *testing.T) {
 			}
 			m := elem.Map()
 			d := model.Device{}
-			d.ID = model.DeviceID(m["_id"].(primitive.ObjectID))
+			d.ID = model.DeviceID(m["_id"].(string)) // .(primitive.ObjectID))
 			// d.Attributes = m["Attributes"].(map[string]model.DeviceAttribute)
 
 			attributes := m["attributes"].(interface{})
@@ -762,7 +763,7 @@ func TestMongoAddDevice(t *testing.T) {
 			// 	l.Infof("   here is id found: %s", d)
 			// 	count++
 			// }
-			t.Logf("and found %d by '%s'", count, objectID.String())
+			t.Logf("and found %d by '%s'", count, objectID)
 
 			// result := devsColl.FindOne(ctx, bson.M{DbDevId: objectID}) // objectID.String()}) // testCase.InputDevice.ID.String()})
 			// if err = result.Err(); err != nil {
@@ -776,6 +777,7 @@ func TestMongoAddDevice(t *testing.T) {
 		}
 
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func compareDevsWithoutTimestamps(t *testing.T, expected, actual *model.Device) {
@@ -785,9 +787,9 @@ func compareDevsWithoutTimestamps(t *testing.T, expected, actual *model.Device) 
 }
 
 func TestNewDataStoreMongo(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping TestNewDataStoreMongo in short mode.")
-	}
+	// if testing.Short() {
+	t.Skip("skipping TestNewDataStoreMongo in short mode.")
+	// }
 
 	ds, err := NewDataStoreMongo(DataStoreMongoConfig{ConnectionString: "illegal url"}, nil)
 
@@ -816,7 +818,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, update both attrs (descr + val)": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -832,7 +834,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"mac": {
 					Description: strPtr("mac description"),
@@ -858,7 +860,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, update both attrs (descr + val); with tenant": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -874,7 +876,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"mac": {
 					Description: strPtr("mac description"),
@@ -900,7 +902,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, update one attr (descr + val)": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -916,7 +918,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"sn": {
 					Description: strPtr("sn description"),
@@ -939,7 +941,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, update one attr (descr only)": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -955,7 +957,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"sn": {
 					Description: strPtr("sn description"),
@@ -976,7 +978,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, update one attr (value only)": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -992,7 +994,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"sn": {
 					Value: "0003-newsn",
@@ -1013,7 +1015,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, update one attr (value only, change type)": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -1029,7 +1031,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"sn": {
 					Value: []string{"0003-sn-1", "0003-sn-2"},
@@ -1051,7 +1053,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, add(merge) new attrs": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -1067,7 +1069,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"new-1": {
 					Name:  "new-1",
@@ -1104,7 +1106,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, attributes exist, add(merge) new attrs + modify existing": {
 			devs: []model.Device{
 				{
-					ID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Attributes: map[string]model.DeviceAttribute{
 						"mac": {
 							Name:        "mac",
@@ -1120,7 +1122,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"mac": {
 					Name:        "mac",
@@ -1163,11 +1165,11 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		"dev exists, no attributes exist, upsert new attrs (val + descr)": {
 			devs: []model.Device{
 				{
-					ID:        [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:        "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					CreatedTs: createdTs,
 				},
 			},
-			inDevId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"ip": {
 					Value:       []string{"1.2.3.4", "1.2.3.5"},
@@ -1192,7 +1194,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		},
 		"dev doesn't exist, upsert new attr (descr + val)": {
 			devs:    []model.Device{},
-			inDevId: [12]byte{99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "630000000000000000000000", // [12]byte{99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"ip": {
 					Description: strPtr("ip addr array"),
@@ -1209,7 +1211,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		},
 		"dev doesn't exist, upsert new attr (val only)": {
 			devs:    []model.Device{},
-			inDevId: [12]byte{99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "630000000000000000000000", // [12]byte{99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"ip": {
 					Value: []string{"1.2.3.4", "1.2.3.5"},
@@ -1223,7 +1225,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 			},
 		},
 		"dev doesn't exist, upsert with new attrs (val + descr)": {
-			inDevId: [12]byte{99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inDevId: "990000000000000000000000", // [12]byte{99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			inAttrs: map[string]model.DeviceAttribute{
 				"ip": {
 					Value:       []string{"1.2.3.4", "1.2.3.5"},
@@ -1248,15 +1250,15 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, tc := range testCases {
 
 		t.Logf("%s", name)
 		//setup
 		db.Wipe()
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
 
 		if tc.tenant != "" {
@@ -1297,8 +1299,7 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					dev.UpdatedTs.Unix() == dev.CreatedTs.Unix()
 			})
 	}
-
-	//wipe(d)
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestMongoUpdateDeviceGroup(t *testing.T) {
@@ -1314,25 +1315,25 @@ func TestMongoUpdateDeviceGroup(t *testing.T) {
 		tenant         string
 		OutputError    error
 	}{
-		// "update group for device with empty device id": {
-		// 	InputDeviceID:  nil,
-		// 	InputGroupName: model.GroupName("abc"),
-		// 	InputDevice:    nil,
-		// 	OutputError:    store.ErrDevNotFound,
-		// },
-		// "update group for device with empty device id; with tenant": {
-		// 	InputDeviceID:  nil,
-		// 	InputGroupName: model.GroupName("abc"),
-		// 	InputDevice:    nil,
-		// 	tenant:         "foo",
-		// 	OutputError:    store.ErrDevNotFound,
-		// },
-		// "update group for device, device not found": {
-		// 	InputDeviceID:  [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		// 	InputGroupName: model.GroupName("abc"),
-		// 	InputDevice:    nil,
-		// 	OutputError:    store.ErrDevNotFound,
-		// },
+		"update group for device with empty device id": {
+			InputDeviceID:  model.DeviceID(""),
+			InputGroupName: model.GroupName("abc"),
+			InputDevice:    nil,
+			OutputError:    store.ErrDevNotFound,
+		},
+		"update group for device with empty device id; with tenant": {
+			InputDeviceID:  model.DeviceID(""),
+			InputGroupName: model.GroupName("abc"),
+			InputDevice:    nil,
+			tenant:         "foo",
+			OutputError:    store.ErrDevNotFound,
+		},
+		"update group for device, device not found": {
+			InputDeviceID:  "020000000000000000000000",
+			InputGroupName: model.GroupName("abc"),
+			InputDevice:    nil,
+			OutputError:    store.ErrDevNotFound,
+		},
 		"update group for device, group exists": {
 			InputDeviceID:  model.DeviceID(deviceID), //model.NilDeviceID, // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			InputGroupName: model.GroupName("abc"),
@@ -1341,34 +1342,34 @@ func TestMongoUpdateDeviceGroup(t *testing.T) {
 				Group: model.GroupName("def"),
 			},
 		},
-		// "update group for device, group exists; with tenant": {
-		// 	InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		// 	InputGroupName: model.GroupName("abc"),
-		// 	InputDevice: &model.Device{
-		// 		ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		// 		Group: model.GroupName("def"),
-		// 	},
-		// 	tenant: "foo",
-		// },
-		// "update group for device, group does not exist": {
-		// 	InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		// 	InputGroupName: model.GroupName("abc"),
-		// 	InputDevice: &model.Device{
-		// 		ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		// 		Group: model.GroupName(""),
-		// 	},
-		// },
+		"update group for device, group exists; with tenant": {
+			InputDeviceID:  "010000000000000000000000",
+			InputGroupName: model.GroupName("abc"),
+			InputDevice: &model.Device{
+				ID:    "010000000000000000000000",
+				Group: model.GroupName("def"),
+			},
+			tenant: "foo",
+		},
+		"update group for device, group does not exist": {
+			InputDeviceID:  "010000000000000000000000",
+			InputGroupName: model.GroupName("abc"),
+			InputDevice: &model.Device{
+				ID:    "010000000000000000000000",
+				Group: model.GroupName(""),
+			},
+		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 32*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, testCase := range testCases {
 		t.Logf("test case: %s", name)
 
 		// Make sure we start test with empty database
 		db.Wipe()
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 32*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 
 		store := NewDataStoreMongoWithSession(client)
 		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
@@ -1383,10 +1384,7 @@ func TestMongoUpdateDeviceGroup(t *testing.T) {
 			client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(ctx, testCase.InputDevice)
 		}
 
-		time.Sleep(4 * time.Second)
-
 		err = store.UpdateDeviceGroup(ctx, testCase.InputDeviceID, testCase.InputGroupName)
-		time.Sleep(4 * time.Second)
 		if testCase.OutputError != nil {
 			assert.Error(t, err, "expected error")
 
@@ -1406,6 +1404,7 @@ func TestMongoUpdateDeviceGroup(t *testing.T) {
 		}
 
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func strPtr(s string) *string {
@@ -1449,49 +1448,49 @@ func TestMongoUnsetDevicesGroupWithGroupName(t *testing.T) {
 		OutputError    error
 	}{
 		"unset group for device with group id, device not found": {
-			InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID:  "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			InputGroupName: model.GroupName("e16c71ec"),
 			InputDevice:    nil,
 			OutputError:    store.ErrDevNotFound,
 		},
 		"unset group for device with group id, device not found; with tenant": {
-			InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID:  "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			InputGroupName: model.GroupName("e16c71ec"),
 			InputDevice:    nil,
 			tenant:         "foo",
 			OutputError:    store.ErrDevNotFound,
 		},
 		"unset group for device, ok": {
-			InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID:  "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			InputGroupName: model.GroupName("e16c71ec"),
 			InputDevice: &model.Device{
-				ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Group: model.GroupName("e16c71ec"),
 			},
 		},
 		"unset group for device, ok; with tenant": {
-			InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID:  "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			InputGroupName: model.GroupName("e16c71ec"),
 			InputDevice: &model.Device{
-				ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Group: model.GroupName("e16c71ec"),
 			},
 			tenant: "foo",
 		},
 		"unset group for device with incorrect group name provided": {
-			InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID:  "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			InputGroupName: model.GroupName("other-group-name"),
 			InputDevice: &model.Device{
-				ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Group: model.GroupName("e16c71ec"),
 			},
 			OutputError: store.ErrDevNotFound,
 		},
 		"unset group for device with incorrect group name provided; with tenant": {
-			InputDeviceID:  [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID:  "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			InputGroupName: model.GroupName("other-group-name"),
 			InputDevice: &model.Device{
-				ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Group: model.GroupName("e16c71ec"),
 			},
 			tenant:      "foo",
@@ -1499,18 +1498,19 @@ func TestMongoUnsetDevicesGroupWithGroupName(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, testCase := range testCases {
 		t.Logf("test case: %s", name)
 
 		// Make sure we start test with empty database
 		db.Wipe()
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 
 		store := NewDataStoreMongoWithSession(client)
 		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
+		_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 
 		if testCase.tenant != "" {
 			ctx = identity.WithContext(ctx, &identity.Identity{
@@ -1542,6 +1542,7 @@ func TestMongoUnsetDevicesGroupWithGroupName(t *testing.T) {
 		}
 
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestMongoListGroups(t *testing.T) {
@@ -1557,23 +1558,23 @@ func TestMongoListGroups(t *testing.T) {
 		"groups foo, bar": {
 			InputDevices: []model.Device{
 				{
-					ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("foo"),
 				},
 				{
-					ID:    [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("foo"),
 				},
 				{
-					ID:    [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("foo"),
 				},
 				{
-					ID:    [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "040000000000000000000000", // [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("bar"),
 				},
 				{
-					ID:    [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "050000000000000000000000", // [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 			},
@@ -1582,23 +1583,23 @@ func TestMongoListGroups(t *testing.T) {
 		"groups foo, bar; with tenant": {
 			InputDevices: []model.Device{
 				{
-					ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("foo"),
 				},
 				{
-					ID:    [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("foo"),
 				},
 				{
-					ID:    [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("foo"),
 				},
 				{
-					ID:    [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "040000000000000000000000", // [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName("bar"),
 				},
 				{
-					ID:    [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "050000000000000000000000", // [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 			},
@@ -1608,15 +1609,15 @@ func TestMongoListGroups(t *testing.T) {
 		"no groups": {
 			InputDevices: []model.Device{
 				{
-					ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 				{
-					ID:    [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 				{
-					ID:    [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 			},
@@ -1625,15 +1626,15 @@ func TestMongoListGroups(t *testing.T) {
 		"no groups; with tenant": {
 			InputDevices: []model.Device{
 				{
-					ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "010000000000000000000000", // [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 				{
-					ID:    [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "020000000000000000000000", // [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 				{
-					ID:    [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					ID:    "030000000000000000000000", // [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					Group: model.GroupName(""),
 				},
 			},
@@ -1642,14 +1643,14 @@ func TestMongoListGroups(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, testCase := range testCases {
 		t.Logf("test case: %s", name)
 
 		db.Wipe()
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
 
 		if testCase.tenant != "" {
@@ -1679,6 +1680,7 @@ func TestMongoListGroups(t *testing.T) {
 		}
 
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestGetDevicesByGroup(t *testing.T) {
@@ -1688,39 +1690,39 @@ func TestGetDevicesByGroup(t *testing.T) {
 
 	devDevices := []model.Device{
 		{
-			ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "010000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 		{
-			ID:    [12]byte{6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "060000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 		{
-			ID:    [12]byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "080000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 	}
 	prodDevices := []model.Device{
 		{
-			ID:    [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "020000000000000000000000",
 			Group: model.GroupName("prod"),
 		},
 		{
-			ID:    [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "040000000000000000000000",
 			Group: model.GroupName("prod"),
 		},
 		{
-			ID:    [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "050000000000000000000000",
 			Group: model.GroupName("prod"),
 		},
 	}
 	testDevices := []model.Device{
 		{
-			ID:    [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "030000000000000000000000",
 			Group: model.GroupName("test"),
 		},
 		{
-			ID:    [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "070000000000000000000000",
 			Group: model.GroupName("test"),
 		},
 	}
@@ -1743,9 +1745,9 @@ func TestGetDevicesByGroup(t *testing.T) {
 			InputSkip:      0,
 			InputLimit:     0,
 			OutputDevices: []model.DeviceID{
-				[12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"010000000000000000000000",
+				"060000000000000000000000",
+				"080000000000000000000000",
 			},
 			OutputDeviceCount: len(devDevices),
 			OutputError:       nil,
@@ -1755,8 +1757,8 @@ func TestGetDevicesByGroup(t *testing.T) {
 			InputSkip:      0,
 			InputLimit:     2,
 			OutputDevices: []model.DeviceID{
-				[12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"020000000000000000000000",
+				"040000000000000000000000",
 			},
 			OutputDeviceCount: len(prodDevices),
 			OutputError:       nil,
@@ -1766,7 +1768,7 @@ func TestGetDevicesByGroup(t *testing.T) {
 			InputSkip:      2,
 			InputLimit:     0,
 			OutputDevices: []model.DeviceID{
-				[12]byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"080000000000000000000000",
 			},
 			OutputDeviceCount: len(devDevices),
 			OutputError:       nil,
@@ -1776,7 +1778,7 @@ func TestGetDevicesByGroup(t *testing.T) {
 			InputSkip:      1,
 			InputLimit:     1,
 			OutputDevices: []model.DeviceID{
-				[12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"040000000000000000000000",
 			},
 			OutputDeviceCount: len(prodDevices),
 			OutputError:       nil,
@@ -1802,9 +1804,9 @@ func TestGetDevicesByGroup(t *testing.T) {
 			InputSkip:      0,
 			InputLimit:     10,
 			OutputDevices: []model.DeviceID{
-				[12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"010000000000000000000000",
+				"060000000000000000000000",
+				"080000000000000000000000",
 			},
 			OutputDeviceCount: len(devDevices),
 			OutputError:       nil,
@@ -1814,9 +1816,9 @@ func TestGetDevicesByGroup(t *testing.T) {
 			InputSkip:      0,
 			InputLimit:     10,
 			OutputDevices: []model.DeviceID{
-				[12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"020000000000000000000000",
+				"040000000000000000000000",
+				"050000000000000000000000",
 			},
 			OutputDeviceCount: len(prodDevices),
 			OutputError:       nil,
@@ -1826,8 +1828,8 @@ func TestGetDevicesByGroup(t *testing.T) {
 			InputSkip:      0,
 			InputLimit:     10,
 			OutputDevices: []model.DeviceID{
-				[12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"030000000000000000000000",
+				"070000000000000000000000",
 			},
 			OutputDeviceCount: len(testDevices),
 			OutputError:       nil,
@@ -1866,7 +1868,7 @@ func TestGetDevicesByGroup(t *testing.T) {
 			}
 		}
 	}
-
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestGetDevicesByGroupWithTenant(t *testing.T) {
@@ -1876,35 +1878,35 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 
 	inputDevices := []model.Device{
 		{
-			ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "010000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 		{
-			ID:    [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "020000000000000000000000",
 			Group: model.GroupName("prod"),
 		},
 		{
-			ID:    [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "030000000000000000000000",
 			Group: model.GroupName("test"),
 		},
 		{
-			ID:    [12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "040000000000000000000000",
 			Group: model.GroupName("prod"),
 		},
 		{
-			ID:    [12]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "050000000000000000000000",
 			Group: model.GroupName("prod"),
 		},
 		{
-			ID:    [12]byte{6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "060000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 		{
-			ID:    [12]byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "070000000000000000000000",
 			Group: model.GroupName("test"),
 		},
 		{
-			ID:    [12]byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "080000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 	}
@@ -1922,9 +1924,9 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 			InputSkip:      0,
 			InputLimit:     0,
 			OutputDevices: []model.DeviceID{
-				[12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"010000000000000000000000",
+				"060000000000000000000000",
+				"080000000000000000000000",
 			},
 			OutputDeviceCount: 3,
 			OutputError:       nil,
@@ -1934,8 +1936,8 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 			InputSkip:      0,
 			InputLimit:     2,
 			OutputDevices: []model.DeviceID{
-				[12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"020000000000000000000000",
+				"040000000000000000000000",
 			},
 			OutputDeviceCount: 3,
 			OutputError:       nil,
@@ -1945,7 +1947,7 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 			InputSkip:      2,
 			InputLimit:     0,
 			OutputDevices: []model.DeviceID{
-				[12]byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"080000000000000000000000",
 			},
 			OutputDeviceCount: 3,
 			OutputError:       nil,
@@ -1955,7 +1957,7 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 			InputSkip:      1,
 			InputLimit:     1,
 			OutputDevices: []model.DeviceID{
-				[12]byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				"040000000000000000000000",
 			},
 			OutputDeviceCount: 3,
 			OutputError:       nil,
@@ -1983,7 +1985,7 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
 	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
 	client, _ := mongo.Connect(ctx, clientOptions)
-	_, _ = client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
+	_, _ = client.Database(mstore.DbFromContext(ctx, DbName+"-foo")).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
 
 	for _, d := range inputDevices {
 		_, err := client.Database(DbName+"-foo").Collection(DbDevicesColl).InsertOne(ctx, d)
@@ -2013,7 +2015,7 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 			}
 		}
 	}
-
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestGetDeviceGroup(t *testing.T) {
@@ -2023,11 +2025,11 @@ func TestGetDeviceGroup(t *testing.T) {
 
 	inputDevices := []model.Device{
 		{
-			ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "010000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 		{
-			ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "020000000000000000000000",
 		},
 	}
 
@@ -2037,17 +2039,17 @@ func TestGetDeviceGroup(t *testing.T) {
 		OutputError   error
 	}{
 		"dev has group": {
-			InputDeviceID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID: "010000000000000000000000",
 			OutputGroup:   model.GroupName("dev"),
 			OutputError:   nil,
 		},
 		"dev has no group": {
-			InputDeviceID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID: "020000000000000000000000",
 			OutputGroup:   "",
 			OutputError:   nil,
 		},
 		"dev doesn't exist": {
-			InputDeviceID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID: "030000000000000000000000",
 			OutputGroup:   "",
 			OutputError:   store.ErrDevNotFound,
 		},
@@ -2080,7 +2082,7 @@ func TestGetDeviceGroup(t *testing.T) {
 			assert.Equal(t, tc.OutputGroup, group)
 		}
 	}
-
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestGetDeviceGroupWithTenant(t *testing.T) {
@@ -2090,11 +2092,11 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 
 	inputDevices := []model.Device{
 		{
-			ID:    [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID:    "010000000000000000000000",
 			Group: model.GroupName("dev"),
 		},
 		{
-			ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "020000000000000000000000",
 		},
 	}
 
@@ -2104,17 +2106,17 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 		OutputError   error
 	}{
 		"dev has group": {
-			InputDeviceID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID: "010000000000000000000000",
 			OutputGroup:   model.GroupName("dev"),
 			OutputError:   nil,
 		},
 		"dev has no group": {
-			InputDeviceID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID: "020000000000000000000000",
 			OutputGroup:   "",
 			OutputError:   nil,
 		},
 		"dev doesn't exist": {
-			InputDeviceID: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			InputDeviceID: "030000000000000000000000",
 			OutputGroup:   "",
 			OutputError:   store.ErrDevNotFound,
 		},
@@ -2125,7 +2127,7 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
 	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
 	client, _ := mongo.Connect(ctx, clientOptions)
-	_, _ = client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
+	_, _ = client.Database(mstore.DbFromContext(ctx, DbName+"-foo")).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
 
 	for _, d := range inputDevices {
 		_, err := client.Database(DbName+"-foo").Collection(DbDevicesColl).InsertOne(ctx, d)
@@ -2150,7 +2152,7 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 			assert.Equal(t, tc.OutputGroup, group)
 		}
 	}
-
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestMigrate(t *testing.T) {
@@ -2160,14 +2162,14 @@ func TestMigrate(t *testing.T) {
 
 	someDevs := []model.Device{
 		{
-			ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "000000000000000000000000",
 			Attributes: map[string]model.DeviceAttribute{
 				"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
 				"sn":  {Name: "sn", Value: "bar", Description: strPtr("desc")},
 			},
 		},
 		{
-			ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "010000000000000000000000",
 			Attributes: map[string]model.DeviceAttribute{
 				"mac": {Name: "mac", Value: "foo", Description: strPtr("desc")},
 				"foo": {Name: "foo", Value: "foo", Description: strPtr("desc")},
@@ -2175,7 +2177,7 @@ func TestMigrate(t *testing.T) {
 			},
 		},
 		{
-			ID: [12]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			ID: "020000000000000000000000",
 			Attributes: map[string]model.DeviceAttribute{
 				"baz": {Name: "baz", Value: "baz", Description: strPtr("desc")},
 			},
@@ -2243,14 +2245,15 @@ func TestMigrate(t *testing.T) {
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, tc := range testCases {
 		t.Logf("case: %s", name)
 		db.Wipe()
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
-		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
+		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(migrate.DbMigrationsColl).DeleteMany(ctx, bson.M{})
+		err = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 
 		if tc.tenant != "" {
 			ctx = identity.WithContext(ctx, &identity.Identity{
@@ -2301,8 +2304,15 @@ func TestMigrate(t *testing.T) {
 
 			count := 0
 			for cursor.Next(ctx) {
+				var res migrate.MigrationEntry
 				count++
+				elem := &bson.D{}
+				err = cursor.Decode(elem)
+				bsonBytes, _ := bson.Marshal(elem)
+				bson.Unmarshal(bsonBytes, &res)
+				out = append(out, res)
 			}
+
 			assert.Equal(t, len(tc.outVers), count)
 			for i, v := range tc.outVers {
 				assert.Equal(t, v, out[i].Version.String())
@@ -2311,6 +2321,7 @@ func TestMigrate(t *testing.T) {
 			assert.EqualError(t, err, tc.err.Error())
 		}
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 // test funcs
@@ -2320,8 +2331,8 @@ func TestMongoDeleteDevice(t *testing.T) {
 	}
 
 	inputDevs := []model.Device{
-		{ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-		{ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{ID: "000000000000000000000000"},
+		{ID: "010000000000000000000000"},
 	}
 
 	testCases := map[string]struct {
@@ -2330,38 +2341,38 @@ func TestMongoDeleteDevice(t *testing.T) {
 		err      error
 	}{
 		"existing 1": {
-			inputId: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inputId: "000000000000000000000000",
 			expected: []model.Device{
-				{ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+				{ID: "010000000000000000000000"},
 			},
 			err: nil,
 		},
 		"existing 2": {
-			inputId: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inputId: "010000000000000000000000",
 			expected: []model.Device{
-				{ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+				{ID: "000000000000000000000000"},
 			},
 			err: nil,
 		},
 		"doesn't exist": {
-			inputId: [12]byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			inputId: "030000000000000000000000",
 			expected: []model.Device{
-				{ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-				{ID: [12]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+				{ID: "000000000000000000000000"},
+				{ID: "010000000000000000000000"},
 			},
 			err: store.ErrDevNotFound,
 		},
 	}
 
+	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
+	ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+	t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
+	client, _ := mongo.Connect(ctx, clientOptions)
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
 		// Make sure we start test with empty database
 		db.Wipe()
-		clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
-		t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
-		client, _ := mongo.Connect(ctx, clientOptions)
 		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(ctx, bson.M{})
 
 		for _, d := range inputDevs {
@@ -2390,6 +2401,7 @@ func TestMongoDeleteDevice(t *testing.T) {
 		}
 
 	}
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
 
 func TestWithAutomigrate(t *testing.T) {
@@ -2405,4 +2417,5 @@ func TestWithAutomigrate(t *testing.T) {
 	newStore := store.WithAutomigrate()
 
 	assert.NotEqual(t, store, newStore)
+	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
 }
