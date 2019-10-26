@@ -45,10 +45,6 @@ func TestMain(m *testing.M) {
 			db = &dbtest.DBServer{}
 			db.SetPath(dbdir)
 			Session := db.Session()
-			Session.DB("main").C("pages").Insert(map[string]Page{
-				"p0": Page{Slug: "ding", Name: "Ding!", Content: "<i>HTML Awesomeness</i>"},
-				"p1": Page{Slug: "p1p1", Name: "p1p1", Content: "<b>HTML Awesomeness</b>"},
-			})
 			// client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 			// err = client.Connect(ctx,clientOptions)
 			// Tear down databaser server

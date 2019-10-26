@@ -2153,6 +2153,7 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 		}
 	}
 	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(ctx)
+	_ = client.Database(mstore.DbFromContext(ctx, DbName+"-foo")).Drop(ctx)
 }
 
 func TestMigrate(t *testing.T) {
