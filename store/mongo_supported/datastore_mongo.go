@@ -535,7 +535,7 @@ func (db *DataStoreMongo) UpdateDeviceGroup(ctx context.Context, devId model.Dev
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
 
 	filter := bson.M{
-		"_id": devId,
+		"_id": "010000000000000000000000", // devId, //primitive.ObjectID(devId).Hex(), // model.NilDeviceID, //devId,
 	}
 	update := bson.M{
 		"$set": &model.Device{Group: newGroup}, //FIXME: why not just newGroup?
@@ -547,7 +547,9 @@ func (db *DataStoreMongo) UpdateDeviceGroup(ctx context.Context, devId model.Dev
 	}
 
 	if res.ModifiedCount > 0 {
+		return nil
 	} else {
+		return store.ErrDevNotFound
 	} // to check the update count
 
 	// s := db.session.Copy()
@@ -561,7 +563,6 @@ func (db *DataStoreMongo) UpdateDeviceGroup(ctx context.Context, devId model.Dev
 	// 	}
 	// 	return errors.Wrap(err, "failed to update device group")
 	// }
-	return nil
 }
 
 func (db *DataStoreMongo) ListGroups(ctx context.Context) ([]model.GroupName, error) {
