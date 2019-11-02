@@ -21,18 +21,11 @@ import (
 
 	"log"
 
-	"github.com/globalsign/mgo/bson"
-	"github.com/globalsign/mgo/dbtest"
+	"github.com/mendersoftware/go-lib-micro/mongo_supported/dbtest"
+	// "go.mongodb.org/mongo-driver/bson"
 )
 
 var db *dbtest.DBServer
-
-type Page struct {
-	ID      bson.ObjectId `json:"_id" bson:"_id,omitempty"`
-	Slug    string        `json:"slug" bson:"slug"`
-	Name    string        `json:"name" bson:"name"`
-	Content string        `json:"content" bson:"content"`
-}
 
 // Overwrites test execution and allows for test database setup
 func TestMain(m *testing.M) {
@@ -53,7 +46,6 @@ func TestMain(m *testing.M) {
 			// testing package executes tests in goroutines therefore
 			// we can't catch panics issued in tests.
 			log.Printf("mongo_supported: started mock mongo (mgo/dbtest)")
-			Session.Close()
 			defer os.RemoveAll(dbdir)
 			defer db.Stop()
 		}
