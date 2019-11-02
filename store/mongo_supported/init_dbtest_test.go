@@ -37,7 +37,8 @@ func TestMain(m *testing.M) {
 		if !testing.Short() {
 			db = &dbtest.DBServer{}
 			db.SetPath(dbdir)
-			Session := db.Session()
+			db.SetTimeout(64)
+			_ = db.Session()
 			// client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 			// err = client.Connect(ctx,clientOptions)
 			// Tear down databaser server

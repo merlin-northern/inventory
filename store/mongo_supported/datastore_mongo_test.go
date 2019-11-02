@@ -14,7 +14,6 @@
 package mongo_supported_test
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -235,17 +234,19 @@ func TestMongoGetDevices(t *testing.T) {
 		// Make sure we start test with empty database
 		db.Wipe()
 
-		ctx := db.Ctx
 		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: tc.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
-		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 		for _, d := range inputDevs {
 			t.Logf("inserting %s", d.ID)
-			_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d) // bson.M{ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}) // bson.M{d})
+			_, err := client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d) // bson.M{ID: [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}) // bson.M{d})
 			if err != nil {
 				t.Logf("inserting %s got: '%s'", d.ID, err.Error())
 			}
@@ -268,6 +269,9 @@ func TestMongoGetDevices(t *testing.T) {
 		assert.Equal(t, len(tc.expected), len(devs))
 		assert.Equal(t, tc.devTotal, totalCount)
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestMongoGetAllAttributeNames(t *testing.T) {
@@ -364,16 +368,18 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 		// Make sure we start test with empty database
 		db.Wipe()
 
-		ctx := db.Ctx
 		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: tc.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
-		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 		for _, d := range tc.inDevs {
-			_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
+			_, err := client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
 			assert.NoError(t, err, "failed to setup input data")
 		}
 
@@ -388,6 +394,9 @@ func TestMongoGetAllAttributeNames(t *testing.T) {
 
 		assert.ElementsMatch(t, tc.outAttrs, names)
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestMongoGetDevice(t *testing.T) {
@@ -454,11 +463,13 @@ func TestMongoGetDevice(t *testing.T) {
 		store := NewDataStoreMongoWithSession(client)
 		// _, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 
-		ctx := db.Ctx
-
 		if testCase.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: testCase.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
@@ -471,11 +482,11 @@ func TestMongoGetDevice(t *testing.T) {
 					"mac": {Name: "mac", Value: "0200-mac"},
 				},
 			}
-			t.Logf("InsertOne(%s)", testCase.InputDevice.ID)
-			client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, inputDevice)
+			t.Logf("db:%s InsertOne(%s)", mstore.DbFromContext(db.Ctx, DbName), testCase.InputDevice.ID)
+			client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, inputDevice)
 		}
 
-		t.Logf("calling GetDevice(%s)", testCase.InputID)
+		t.Logf("calling db:%s GetDevice(%s)", mstore.DbFromContext(db.Ctx, DbName), testCase.InputID)
 		dbdev, err := store.GetDevice(db.Ctx, testCase.InputID)
 		if dbdev != nil {
 			t.Logf("got device with id %s GetDevice", dbdev.ID)
@@ -493,6 +504,9 @@ func TestMongoGetDevice(t *testing.T) {
 		assert.NoError(t, err, "expected no error")
 
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestMongoAddDevice(t *testing.T) {
@@ -700,15 +714,17 @@ func TestMongoAddDevice(t *testing.T) {
 
 		store := NewDataStoreMongoWithSession(client)
 
-		ctx := db.Ctx
 		if testCase.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: testCase.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
-		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
-		c := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+		c := client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl)
 		result, err := c.InsertOne(db.Ctx, existing)
 		assert.NoError(t, err)
 		objectID := result.InsertedID.(string)
@@ -719,7 +735,7 @@ func TestMongoAddDevice(t *testing.T) {
 		// 	testCase.OutputDevice.ID[i] = objectID[i]
 		// }
 
-		l := log.FromContext(ctx)
+		l := log.FromContext(db.Ctx)
 		l.Infof("inserted id=%s calling AddDevice with device=%s.",
 			objectID, testCase.InputDevice)
 		err = store.AddDevice(db.Ctx, testCase.InputDevice)
@@ -730,7 +746,7 @@ func TestMongoAddDevice(t *testing.T) {
 			assert.NoError(t, err, "expected no error inserting to data store")
 
 			var dbdev model.Device
-			devsColl := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+			devsColl := client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl)
 			t.Logf("looking for: '%s'", model.DeviceID(testCase.InputDevice.ID))
 
 			cursor, e := devsColl.Find(db.Ctx, bson.M{DbDevId: model.DeviceID(testCase.InputDevice.ID)})
@@ -738,7 +754,7 @@ func TestMongoAddDevice(t *testing.T) {
 				t.Logf("and here now this is an error: '%s'.", e.Error())
 			}
 			count := 0
-			l := log.FromContext(ctx)
+			l := log.FromContext(db.Ctx)
 			cursor.Next(db.Ctx)
 			elem := &bson.D{}
 			if err = cursor.Decode(elem); err != nil {
@@ -779,6 +795,9 @@ func TestMongoAddDevice(t *testing.T) {
 		}
 
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func compareDevsWithoutTimestamps(t *testing.T, expected, actual *model.Device) {
@@ -1263,15 +1282,18 @@ func TestMongoUpsertAttributes(t *testing.T) {
 		db.Wipe()
 		// _, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 
-		ctx := db.Ctx
 		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: tc.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
 		for _, d := range tc.devs {
-			_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
+			_, err := client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
 			assert.NoError(t, err, "failed to setup input data")
 		}
 
@@ -1302,6 +1324,9 @@ func TestMongoUpsertAttributes(t *testing.T) {
 					dev.UpdatedTs.Unix() == dev.CreatedTs.Unix()
 			})
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestMongoUpdateDeviceGroup(t *testing.T) {
@@ -1377,15 +1402,18 @@ func TestMongoUpdateDeviceGroup(t *testing.T) {
 		store := NewDataStoreMongoWithSession(client)
 		// _, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 
-		ctx := db.Ctx
 		if testCase.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: testCase.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
 		if testCase.InputDevice != nil {
-			client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, testCase.InputDevice)
+			client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, testCase.InputDevice)
 		}
 
 		err := store.UpdateDeviceGroup(db.Ctx, testCase.InputDeviceID, testCase.InputGroupName)
@@ -1396,7 +1424,7 @@ func TestMongoUpdateDeviceGroup(t *testing.T) {
 		} else {
 			assert.NoError(t, err, "expected no error")
 
-			groupsColl := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+			groupsColl := client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl)
 			cursor, err := groupsColl.Find(db.Ctx, bson.M{"group": model.GroupName("abc")})
 			assert.NoError(t, err, "expected no error")
 
@@ -1408,7 +1436,9 @@ func TestMongoUpdateDeviceGroup(t *testing.T) {
 		}
 
 	}
-	// _ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(db.Ctx)
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func strPtr(s string) *string {
@@ -1517,15 +1547,18 @@ func TestMongoUnsetDevicesGroupWithGroupName(t *testing.T) {
 		// _, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 		// _ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(db.Ctx)
 
-		ctx := db.Ctx
 		if testCase.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: testCase.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
 		if testCase.InputDevice != nil {
-			client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, testCase.InputDevice)
+			client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, testCase.InputDevice)
 		}
 
 		err := store.UnsetDeviceGroup(db.Ctx, testCase.InputDeviceID, testCase.InputGroupName)
@@ -1536,7 +1569,7 @@ func TestMongoUnsetDevicesGroupWithGroupName(t *testing.T) {
 		} else {
 			assert.NoError(t, err, "expected no error")
 
-			groupsColl := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl)
+			groupsColl := client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl)
 			cursor, err := groupsColl.Find(db.Ctx, bson.M{"group": model.GroupName("e16c71ec")})
 			assert.NoError(t, err, "expected no error")
 
@@ -1548,6 +1581,9 @@ func TestMongoUnsetDevicesGroupWithGroupName(t *testing.T) {
 		}
 
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestMongoListGroups(t *testing.T) {
@@ -1658,15 +1694,18 @@ func TestMongoListGroups(t *testing.T) {
 
 		db.Wipe()
 
-		ctx := db.Ctx
 		if testCase.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: testCase.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
 		for _, d := range testCase.InputDevices {
-			client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
+			client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
 		}
 
 		// Make sure we start test with empty database
@@ -1686,6 +1725,9 @@ func TestMongoListGroups(t *testing.T) {
 		}
 
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestGetDevicesByGroup(t *testing.T) {
@@ -1858,7 +1900,6 @@ func TestGetDevicesByGroup(t *testing.T) {
 
 		store := NewDataStoreMongoWithSession(client)
 
-		ctx := context.Background()
 		devs, totalCount, err := store.GetDevicesByGroup(db.Ctx, tc.InputGroupName, tc.InputSkip, tc.InputLimit)
 
 		if tc.OutputError != nil {
@@ -2001,8 +2042,7 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 
 		store := NewDataStoreMongoWithSession(client)
 
-		ctx := context.Background()
-		ctx = identity.WithContext(ctx, &identity.Identity{
+		db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 			Tenant: "foo",
 		})
 		devs, totalCount, err := store.GetDevicesByGroup(db.Ctx, tc.InputGroupName, tc.InputSkip, tc.InputLimit)
@@ -2019,6 +2059,9 @@ func TestGetDevicesByGroupWithTenant(t *testing.T) {
 			}
 		}
 	}
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestGetDeviceGroup(t *testing.T) {
@@ -2064,7 +2107,6 @@ func TestGetDeviceGroup(t *testing.T) {
 	// ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
 	// t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
 	// client, _ := mongo.Connect(ctx, clientOptions)
-	_, _ = client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 
 	for _, d := range inputDevices {
 		_, err := client.Database(DbName).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
@@ -2076,7 +2118,6 @@ func TestGetDeviceGroup(t *testing.T) {
 
 		store := NewDataStoreMongoWithSession(client)
 
-		ctx := context.Background()
 		group, err := store.GetDeviceGroup(db.Ctx, tc.InputDeviceID)
 
 		if tc.OutputError != nil {
@@ -2086,7 +2127,6 @@ func TestGetDeviceGroup(t *testing.T) {
 			assert.Equal(t, tc.OutputGroup, group)
 		}
 	}
-	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(db.Ctx)
 }
 
 func TestGetDeviceGroupWithTenant(t *testing.T) {
@@ -2132,7 +2172,6 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 	// ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
 	// t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
 	// client, _ := mongo.Connect(ctx, clientOptions)
-	_, _ = client.Database(mstore.DbFromContext(ctx, DbName+"-foo")).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 
 	for _, d := range inputDevices {
 		_, err := client.Database(DbName+"-foo").Collection(DbDevicesColl).InsertOne(db.Ctx, d)
@@ -2144,8 +2183,7 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 
 		store := NewDataStoreMongoWithSession(client)
 
-		ctx := context.Background()
-		ctx = identity.WithContext(ctx, &identity.Identity{
+		db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 			Tenant: "foo",
 		})
 		group, err := store.GetDeviceGroup(db.Ctx, tc.InputDeviceID)
@@ -2157,8 +2195,9 @@ func TestGetDeviceGroupWithTenant(t *testing.T) {
 			assert.Equal(t, tc.OutputGroup, group)
 		}
 	}
-	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(db.Ctx)
-	_ = client.Database(mstore.DbFromContext(ctx, DbName+"-foo")).Drop(db.Ctx)
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 func TestMigrate(t *testing.T) {
@@ -2259,13 +2298,14 @@ func TestMigrate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("case: %s", name)
 		db.Wipe()
-		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(migrate.DbMigrationsColl).DeleteMany(db.Ctx, bson.M{})
-		err = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(db.Ctx)
 
-		ctx := db.Ctx
 		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
 				Tenant: tc.tenant,
+			})
+		} else {
+			db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+				Tenant: "",
 			})
 		}
 
@@ -2286,7 +2326,7 @@ func TestMigrate(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			_, err = client.Database(mstore.DbFromContext(ctx, DbName)).
+			_, err = client.Database(mstore.DbFromContext(db.Ctx, DbName)).
 				Collection(migrate.DbMigrationsColl).
 				InsertOne(db.Ctx, entry)
 			assert.NoError(t, err)
@@ -2294,19 +2334,19 @@ func TestMigrate(t *testing.T) {
 
 		// input devices
 		for _, d := range tc.inDevs {
-			_, err := client.Database(mstore.DbFromContext(ctx, DbName)).
+			_, err := client.Database(mstore.DbFromContext(db.Ctx, DbName)).
 				Collection(DbDevicesColl).
 				InsertOne(db.Ctx, d)
 			assert.NoError(t, err)
 		}
 
-		err = store.Migrate(db.Ctx, DbVersion)
+		err := store.Migrate(db.Ctx, DbVersion)
 		if tc.err == nil {
 			assert.NoError(t, err)
 
 			// verify migration entries
 			var out []migrate.MigrationEntry
-			cursor, _ := client.Database(mstore.DbFromContext(ctx, DbName)).
+			cursor, _ := client.Database(mstore.DbFromContext(db.Ctx, DbName)).
 				Collection(migrate.DbMigrationsColl).
 				Find(db.Ctx, bson.M{})
 
@@ -2329,7 +2369,9 @@ func TestMigrate(t *testing.T) {
 			assert.EqualError(t, err, tc.err.Error())
 		}
 	}
-	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(db.Ctx)
+	db.Ctx = identity.WithContext(db.Ctx, &identity.Identity{
+		Tenant: "",
+	})
 }
 
 // test funcs
@@ -2382,7 +2424,6 @@ func TestMongoDeleteDevice(t *testing.T) {
 
 		// Make sure we start test with empty database
 		db.Wipe()
-		_, err := client.Database(mstore.DbFromContext(ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 
 		for _, d := range inputDevs {
 			_, err := client.Database(DbName).Collection(DbDevicesColl).InsertOne(db.Ctx, d)
@@ -2392,7 +2433,7 @@ func TestMongoDeleteDevice(t *testing.T) {
 		store := NewDataStoreMongoWithSession(client)
 
 		//test
-		err = store.DeleteDevice(db.Ctx, tc.inputId)
+		err := store.DeleteDevice(db.Ctx, tc.inputId)
 		if tc.err != nil {
 			assert.EqualError(t, err, tc.err.Error())
 		} else {
@@ -2410,7 +2451,6 @@ func TestMongoDeleteDevice(t *testing.T) {
 		}
 
 	}
-	_ = client.Database(mstore.DbFromContext(ctx, DbName)).Drop(db.Ctx)
 }
 
 func TestWithAutomigrate(t *testing.T) {
@@ -2420,7 +2460,6 @@ func TestWithAutomigrate(t *testing.T) {
 	// ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
 	// t.Logf("mongo_supported: connecting to mongo '%v'", clientOptions)
 	// client, _ := mongo.Connect(ctx, clientOptions)
-	_, _ = client.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl).DeleteMany(db.Ctx, bson.M{})
 
 	store := NewDataStoreMongoWithSession(client)
 
