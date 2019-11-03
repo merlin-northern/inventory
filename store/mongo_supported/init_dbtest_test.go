@@ -21,15 +21,23 @@ import (
 
 	"log"
 
+	// mgo "github.com/globalsign/mgo"
+
 	"github.com/mendersoftware/go-lib-micro/mongo_supported/dbtest"
 	// "go.mongodb.org/mongo-driver/bson"
+	// "github.com/globalsign/mgo/bson"
 )
 
 var db *dbtest.DBServer
 
 // Overwrites test execution and allows for test database setup
 func TestMain(m *testing.M) {
-	log.Println("test")
+	// log.Println("truet")
+	// mgo.SetStats(true)
+	// b := bson.M{}
+	// if b != nil {
+
+	// }
 	dbdir, _ := ioutil.TempDir("/tmp", "dbsetup-test")
 	// os.Exit would ignore defers, workaround
 	status := func() int {

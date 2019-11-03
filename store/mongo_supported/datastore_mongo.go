@@ -116,7 +116,6 @@ func NewDataStoreMongo(config DataStoreMongoConfig, l *log.Logger) (store.DataSt
 		ctx, _ := context.WithTimeout(context.Background(), DbConnectionTimeout_s*time.Second)
 		// client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 		// err = client.Connect(ctx,clientOptions)
-		var err error
 		clientGlobal, err = mongo.Connect(ctx, clientOptions)
 		if err != nil {
 			if l != nil {
@@ -135,8 +134,9 @@ func NewDataStoreMongo(config DataStoreMongoConfig, l *log.Logger) (store.DataSt
 			It is best practice to keep a client that is connected to MongoDB around so that the application can make use of connection pooling - you don't want to open and close a connection for each query. However, if your application no longer requires a connection, the connection can be closed with client.Disconnect() like so:
 		*/
 		//err = client.Disconnect(context.TODO()) should be called when the connection is no longer needed
-		err = clientGlobal.Ping(context.TODO(), nil)
+		err = clientGlobal.Ping(ctx, nil)
 		if err != nil {
+			clientGlobal = nil
 			if l != nil {
 				l.Errorf("mongo_supported: error pigning mongo '%s'", err.Error())
 
@@ -158,6 +158,7 @@ func NewDataStoreMongo(config DataStoreMongoConfig, l *log.Logger) (store.DataSt
 
 	if clientGlobal == nil {
 		// l.Errorf("mongo_supported: client is nil. wow. right out of Once.")
+		return nil, errors.New("failed to open mongo-driver session")
 	}
 	db := &DataStoreMongo{client: clientGlobal}
 	if db.client == nil {
