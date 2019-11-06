@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	ltesting "github.com/mendersoftware/go-lib-micro/log/testing"
-	mtesting "github.com/mendersoftware/go-lib-micro/mongo/testing"
+	mtesting "github.com/mendersoftware/go-lib-micro/mongo_supported/testing"
 )
 
 var db mtesting.TestDBRunner

@@ -22,8 +22,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/mendersoftware/go-lib-micro/mongo/migrate"
-	"github.com/mendersoftware/go-lib-micro/mongo/migrate/mocks"
+	"github.com/mendersoftware/go-lib-micro/mongo_supported/migrate"
+	"github.com/mendersoftware/go-lib-micro/mongo_supported/migrate/mocks"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func TestSimpleMigratorApply(t *testing.T) {
@@ -31,7 +32,7 @@ func TestSimpleMigratorApply(t *testing.T) {
 		t.Skip("skipping TestDummyMigratorApply in short mode.")
 	}
 
-	makeMigration := func(v Version, from Version, err error) Migration {
+	makeMigration := func(v migrate.Version, from migrate.Version, err error) migrate.Migration {
 		m := &mocks.Migration{}
 		m.On("Up", from).Return(err)
 		m.On("Version").Return(v)
@@ -40,135 +41,135 @@ func TestSimpleMigratorApply(t *testing.T) {
 
 	testCases := map[string]struct {
 		Automigrate     bool
-		InputMigrations []MigrationEntry
-		InputVersion    Version
+		InputMigrations []migrate.MigrationEntry
+		InputVersion    migrate.Version
 
-		Migrators []Migration
+		Migrators []migrate.Migration
 
-		OutputVersion Version
+		OutputVersion migrate.Version
 		OutputError   error
 	}{
 		"ok - empty state": {
 			Automigrate:     true,
 			InputMigrations: nil,
-			InputVersion:    MakeVersion(1, 0, 0),
+			InputVersion:    migrate.MakeVersion(1, 0, 0),
 
-			OutputVersion: MakeVersion(1, 0, 0),
+			OutputVersion: migrate.MakeVersion(1, 0, 0),
 		},
 
 		"ok - already has version": {
 			Automigrate: true,
-			InputMigrations: []MigrationEntry{
+			InputMigrations: []migrate.MigrationEntry{
 				{
-					Version:   MakeVersion(1, 0, 0),
+					Version:   migrate.MakeVersion(1, 0, 0),
 					Timestamp: time.Now(),
 				},
 			},
-			InputVersion:  MakeVersion(1, 0, 0),
-			OutputVersion: MakeVersion(1, 0, 0),
+			InputVersion:  migrate.MakeVersion(1, 0, 0),
+			OutputVersion: migrate.MakeVersion(1, 0, 0),
 		},
 		"ok - already has version, no automigrate": {
 			Automigrate: false,
-			InputMigrations: []MigrationEntry{
+			InputMigrations: []migrate.MigrationEntry{
 				{
-					Version:   MakeVersion(1, 0, 0),
+					Version:   migrate.MakeVersion(1, 0, 0),
 					Timestamp: time.Now(),
 				},
 			},
-			InputVersion:  MakeVersion(1, 0, 0),
-			OutputVersion: MakeVersion(1, 0, 0),
+			InputVersion:  migrate.MakeVersion(1, 0, 0),
+			OutputVersion: migrate.MakeVersion(1, 0, 0),
 		},
 		"ok - add default target version": {
 			Automigrate: true,
-			InputMigrations: []MigrationEntry{
+			InputMigrations: []migrate.MigrationEntry{
 				{
-					Version:   MakeVersion(1, 0, 0),
+					Version:   migrate.MakeVersion(1, 0, 0),
 					Timestamp: time.Now(),
 				},
 			},
-			InputVersion:  MakeVersion(1, 1, 0),
-			OutputVersion: MakeVersion(1, 1, 0),
+			InputVersion:  migrate.MakeVersion(1, 1, 0),
+			OutputVersion: migrate.MakeVersion(1, 1, 0),
 		},
 		"ok - add default target version, no automigrate": {
 			Automigrate: false,
-			InputMigrations: []MigrationEntry{
+			InputMigrations: []migrate.MigrationEntry{
 				{
-					Version:   MakeVersion(1, 0, 0),
+					Version:   migrate.MakeVersion(1, 0, 0),
 					Timestamp: time.Now(),
 				},
 			},
-			InputVersion:  MakeVersion(1, 1, 0),
-			OutputVersion: MakeVersion(1, 0, 0),
+			InputVersion:  migrate.MakeVersion(1, 1, 0),
+			OutputVersion: migrate.MakeVersion(1, 0, 0),
 			OutputError:   errors.New("db needs migration: test has version 1.0.0, needs version 1.1.0"),
 		},
 		"ok - ran migrations": {
 			Automigrate: true,
-			InputMigrations: []MigrationEntry{
+			InputMigrations: []migrate.MigrationEntry{
 				{
-					Version:   MakeVersion(1, 0, 0),
+					Version:   migrate.MakeVersion(1, 0, 0),
 					Timestamp: time.Now(),
 				},
 				{
-					Version:   MakeVersion(1, 0, 1),
+					Version:   migrate.MakeVersion(1, 0, 1),
 					Timestamp: time.Now(),
 				},
 			},
-			InputVersion:  MakeVersion(1, 1, 0),
-			OutputVersion: MakeVersion(1, 1, 0),
+			InputVersion:  migrate.MakeVersion(1, 1, 0),
+			OutputVersion: migrate.MakeVersion(1, 1, 0),
 
-			Migrators: []Migration{
-				makeMigration(MakeVersion(1, 0, 1), MakeVersion(1, 0, 0), nil),
-				makeMigration(MakeVersion(1, 1, 0), MakeVersion(1, 0, 1), nil),
+			Migrators: []migrate.Migration{
+				makeMigration(migrate.MakeVersion(1, 0, 1), migrate.MakeVersion(1, 0, 0), nil),
+				makeMigration(migrate.MakeVersion(1, 1, 0), migrate.MakeVersion(1, 0, 1), nil),
 			},
 		},
 		"ok - ran migrations, no automigrate": {
 			Automigrate: false,
-			InputMigrations: []MigrationEntry{
+			InputMigrations: []migrate.MigrationEntry{
 				{
-					Version:   MakeVersion(1, 0, 0),
+					Version:   migrate.MakeVersion(1, 0, 0),
 					Timestamp: time.Now(),
 				},
 				{
-					Version:   MakeVersion(1, 0, 1),
+					Version:   migrate.MakeVersion(1, 0, 1),
 					Timestamp: time.Now(),
 				},
 			},
-			InputVersion:  MakeVersion(1, 1, 0),
-			OutputVersion: MakeVersion(1, 0, 1),
+			InputVersion:  migrate.MakeVersion(1, 1, 0),
+			OutputVersion: migrate.MakeVersion(1, 0, 1),
 
-			Migrators: []Migration{
-				makeMigration(MakeVersion(1, 0, 1), MakeVersion(1, 0, 0), nil),
-				makeMigration(MakeVersion(1, 1, 0), MakeVersion(1, 0, 1), nil),
+			Migrators: []migrate.Migration{
+				makeMigration(migrate.MakeVersion(1, 0, 1), migrate.MakeVersion(1, 0, 0), nil),
+				makeMigration(migrate.MakeVersion(1, 1, 0), migrate.MakeVersion(1, 0, 1), nil),
 			},
 			OutputError: errors.New("db needs migration: test has version 1.0.1, needs version 1.1.0"),
 		},
 		"ok - migration to lower": {
 			Automigrate:     true,
 			InputMigrations: nil,
-			InputVersion:    MakeVersion(0, 1, 0),
-			OutputVersion:   MakeVersion(0, 1, 0),
+			InputVersion:    migrate.MakeVersion(0, 1, 0),
+			OutputVersion:   migrate.MakeVersion(0, 1, 0),
 
-			Migrators: []Migration{
-				makeMigration(MakeVersion(1, 0, 1), MakeVersion(0, 0, 0), nil),
-				makeMigration(MakeVersion(1, 1, 0), MakeVersion(1, 0, 1), nil),
+			Migrators: []migrate.Migration{
+				makeMigration(migrate.MakeVersion(1, 0, 1), migrate.MakeVersion(0, 0, 0), nil),
+				makeMigration(migrate.MakeVersion(1, 1, 0), migrate.MakeVersion(1, 0, 1), nil),
 			},
 		},
 		"err - failed migration": {
 			Automigrate: true,
-			InputMigrations: []MigrationEntry{
+			InputMigrations: []migrate.MigrationEntry{
 				{
-					Version:   MakeVersion(1, 0, 0),
+					Version:   migrate.MakeVersion(1, 0, 0),
 					Timestamp: time.Now(),
 				},
 			},
-			InputVersion: MakeVersion(1, 1, 0),
+			InputVersion: migrate.MakeVersion(1, 1, 0),
 			// migration 1.0.3 fails, thus the output should remain at 1.0.2
-			OutputVersion: MakeVersion(1, 0, 2),
+			OutputVersion: migrate.MakeVersion(1, 0, 2),
 
-			Migrators: []Migration{
-				makeMigration(MakeVersion(1, 0, 1), MakeVersion(1, 0, 0), nil),
-				makeMigration(MakeVersion(1, 0, 3), MakeVersion(1, 0, 2), errors.New("failed")),
-				makeMigration(MakeVersion(1, 0, 2), MakeVersion(1, 0, 1), nil),
+			Migrators: []migrate.Migration{
+				makeMigration(migrate.MakeVersion(1, 0, 1), migrate.MakeVersion(1, 0, 0), nil),
+				makeMigration(migrate.MakeVersion(1, 0, 3), migrate.MakeVersion(1, 0, 2), errors.New("failed")),
+				makeMigration(migrate.MakeVersion(1, 0, 2), migrate.MakeVersion(1, 0, 1), nil),
 			},
 
 			OutputError: errors.New("failed to apply migration from 1.0.2 to 1.0.3: failed"),
@@ -183,13 +184,14 @@ func TestSimpleMigratorApply(t *testing.T) {
 			db.Wipe()
 			session := db.Session()
 			for i := range tc.InputMigrations {
-				err := session.DB("test").C(DbMigrationsColl).
-					Insert(tc.InputMigrations[i])
+				_, err := session.Database("test").
+					Collection(migrate.DbMigrationsColl).
+					InsertOne(db.CTX(), tc.InputMigrations[i])
 				assert.NoError(t, err)
 			}
 
 			//test
-			m := &SimpleMigrator{Session: session, Db: "test", Automigrate: tc.Automigrate}
+			m := &migrate.SimpleMigrator{Session: session, Db: "test", Automigrate: tc.Automigrate}
 			err := m.Apply(context.Background(), tc.InputVersion, tc.Migrators)
 			if tc.OutputError != nil {
 				assert.Error(t, err)
@@ -199,15 +201,28 @@ func TestSimpleMigratorApply(t *testing.T) {
 			}
 
 			//verify
-			var out []MigrationEntry
-			session.DB("test").C(DbMigrationsColl).Find(nil).All(&out)
+			var out []migrate.MigrationEntry
+			cursor, _ := session.Database("test").
+				Collection(migrate.DbMigrationsColl).
+				Find(db.CTX(), bson.M{})
+
+			count := 0
+			for cursor.Next(db.CTX()) {
+				var res migrate.MigrationEntry
+				count++
+				elem := &bson.D{}
+				err = cursor.Decode(elem)
+				bsonBytes, _ := bson.Marshal(elem)
+				bson.Unmarshal(bsonBytes, &res)
+				out = append(out, res)
+			}
+
 			// sort applied migrations
 			sort.Slice(out, func(i int, j int) bool {
-				return VersionIsLess(out[i].Version, out[j].Version)
+				return migrate.VersionIsLess(out[i].Version, out[j].Version)
 			})
 			// applied migration should be last
 			assert.Equal(t, tc.OutputVersion, out[len(out)-1].Version)
-			session.Close()
 		})
 	}
 }
@@ -215,5 +230,5 @@ func TestSimpleMigratorApply(t *testing.T) {
 func TestErrNeedsMigration(t *testing.T) {
 	err := errors.New("db needs migration: mydbname has version 1.0.0, needs version 1.1.0")
 
-	assert.True(t, IsErrNeedsMigration(err))
+	assert.True(t, migrate.IsErrNeedsMigration(err))
 }

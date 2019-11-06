@@ -21,11 +21,7 @@ import (
 
 	"log"
 
-	// mgo "github.com/globalsign/mgo"
-
 	"github.com/mendersoftware/go-lib-micro/mongo_supported/dbtest"
-	// "go.mongodb.org/mongo-driver/bson"
-	// "github.com/globalsign/mgo/bson"
 )
 
 var db *dbtest.DBServer

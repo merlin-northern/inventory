@@ -164,6 +164,10 @@ func (dbs *DBServer) Session() *mongo.Client {
 	return dbs.session
 }
 
+func (dbs *DBServer) CTX() context.Context {
+	return dbs.Ctx
+}
+
 // Wipe drops all created databases and their data.
 //
 // The MongoDB server remains running if it was prevoiusly running,

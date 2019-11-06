@@ -16,10 +16,10 @@ package migrate_test
 import (
 	"testing"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/bson"
 
-	. "github.com/mendersoftware/go-lib-micro/mongo/migrate"
+	. "github.com/mendersoftware/go-lib-micro/mongo_supported/migrate"
 	"github.com/mendersoftware/go-lib-micro/store"
 )
 
@@ -55,16 +55,16 @@ func TestGetTenantDbs(t *testing.T) {
 			session := db.Session()
 
 			// dummy insert on test dbs to create them
-			for _, db := range tc.dbs {
-				err := session.DB(db).C("foo").Insert(bson.M{"foo": "bar"})
+			for _, dbname := range tc.dbs {
+				_, err := session.Database(dbname).
+					Collection("foo").
+					InsertOne(db.CTX(), bson.M{"foo": "bar"})
 				assert.NoError(t, err)
 			}
 
-			res, err := GetTenantDbs(session, store.IsTenantDb(baseDb))
+			res, err := GetTenantDbs(db.CTX(), session, store.IsTenantDb(baseDb))
 			assert.NoError(t, err)
 			assert.Equal(t, tc.dbs, res)
-
-			session.Close()
 		})
 	}
 }

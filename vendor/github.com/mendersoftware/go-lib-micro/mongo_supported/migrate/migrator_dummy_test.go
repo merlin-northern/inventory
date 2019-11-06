@@ -21,7 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/mendersoftware/go-lib-micro/mongo/migrate"
+	. "github.com/mendersoftware/go-lib-micro/mongo_supported/migrate"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func TestDummyMigratorApply(t *testing.T) {
@@ -86,7 +87,9 @@ func TestDummyMigratorApply(t *testing.T) {
 		db.Wipe()
 		session := db.Session()
 		for _, m := range tc.InputMigrations {
-			err := session.DB("test").C(DbMigrationsColl).Insert(m)
+			_, err := session.Database("test").
+				Collection(DbMigrationsColl).
+				InsertOne(db.CTX(), m)
 			assert.NoError(t, err)
 		}
 
@@ -96,13 +99,26 @@ func TestDummyMigratorApply(t *testing.T) {
 
 		//verify
 		var out []MigrationEntry
-		session.DB("test").C(DbMigrationsColl).Find(nil).All(&out)
+		cursor, _ := session.Database("test").
+			Collection(DbMigrationsColl).
+			Find(db.CTX(), bson.M{})
+
+		count := 0
+		for cursor.Next(db.CTX()) {
+			var res MigrationEntry
+			count++
+			elem := &bson.D{}
+			_ = cursor.Decode(elem)
+			bsonBytes, _ := bson.Marshal(elem)
+			bson.Unmarshal(bsonBytes, &res)
+			out = append(out, res)
+		}
+
 		if tc.Automigrate {
 			assert.Len(t, out, 1)
 			assert.Equal(t, tc.OutputVersion, out[0].Version)
 		} else {
 			assert.Len(t, out, len(tc.InputMigrations))
 		}
-		session.Close()
 	}
 }
