@@ -689,12 +689,7 @@ func TestMongoAddDevice(t *testing.T) {
 
 			var dbdev model.Device
 			devsColl := session.Database(mstore.DbFromContext(db.Ctx, DbName)).Collection(DbDevicesColl)
-
-			result := devsColl.FindOne(db.Ctx, bson.M{DbDevId: testCase.InputDevice.ID})
-			elem := &bson.D{}
-			err = result.Decode(elem)
-			bsonBytes, _ := bson.Marshal(elem)
-			bson.Unmarshal(bsonBytes, &dbdev)
+			err := FindId(db.Ctx, devsColl, testCase.InputDevice.ID, &dbdev)
 			assert.NoError(t, err, "error getting device")
 
 			compareDevsWithoutTimestamps(t, testCase.OutputDevice, &dbdev)

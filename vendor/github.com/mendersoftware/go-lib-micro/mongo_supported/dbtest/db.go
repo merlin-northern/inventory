@@ -152,7 +152,7 @@ func (dbs *DBServer) Session() *mongo.Client {
 			dbs.timeout = 8
 		}
 		clientOptions := options.Client().ApplyURI("mongodb://" + dbs.host + "/test")
-		dbs.Ctx, _ = context.WithTimeout(context.Background(), dbs.timeout*time.Second)
+		dbs.Ctx = context.Background() // , _ = context.WithTimeout(context.Background(), dbs.timeout*time.Second)
 		dbs.session, err = mongo.Connect(dbs.Ctx, clientOptions)
 		if err != nil {
 			panic(err)
