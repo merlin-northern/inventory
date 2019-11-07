@@ -21,7 +21,7 @@ import (
 
 	"github.com/mendersoftware/inventory/model"
 	"github.com/mendersoftware/inventory/store"
-	"github.com/mendersoftware/inventory/store/mongo_supported"
+	mongo "github.com/mendersoftware/inventory/store/mongo_supported"
 )
 
 // this inventory service interface

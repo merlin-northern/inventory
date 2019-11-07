@@ -23,7 +23,7 @@ import (
 	api_http "github.com/mendersoftware/inventory/api/http"
 	"github.com/mendersoftware/inventory/config"
 	inventory "github.com/mendersoftware/inventory/inv"
-	"github.com/mendersoftware/inventory/store/mongo_supported"
+	mongo "github.com/mendersoftware/inventory/store/mongo_supported"
 )
 
 func SetupAPI(stacktype string) (*rest.Api, error) {

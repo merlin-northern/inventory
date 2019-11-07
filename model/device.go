@@ -77,7 +77,7 @@ func validateDeviceAttrValArray(arr []interface{}) error {
 // Device wrapper
 type Device struct {
 	//system-generated device ID
-	ID DeviceID `json:"_id" bson:"_id,omitempty"`
+	ID DeviceID `json:"id" bson:"_id,omitempty"`
 
 	//a map of attributes names and their values.
 	Attributes DeviceAttributes `json:"attributes,omitempty" bson:"attributes,omitempty"`
@@ -97,9 +97,9 @@ func (d Device) Validate() error {
 	)
 }
 
-// func (did DeviceID) String() string {
-// 	return primitive.ObjectID(did).String()
-// }
+func (did DeviceID) String() string {
+	return string(did)
+}
 
 // func (did DeviceID) MarshalBSONValue() (bsontype.Type, []byte, error) {
 // 	return bsontype.ObjectID, bsoncore.AppendObjectID(nil, primitive.ObjectID(did)), nil
